@@ -1,0 +1,16 @@
+{
+  "name": "gestao-escolar",
+  "version": "1.0.0",
+  "description": "Sistema de Gestão de Alimentação Escolar",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
+    "start": "cd backend && npm start"
+  },
+  "keywords": ["gestao", "escolar", "alimentacao", "react", "nodejs"],
+  "author": "ewesolon",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
