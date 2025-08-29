@@ -1,16 +1,13 @@
 {
-  "name": "gestao-escolar",
+  "name": "gestao-escolar-frontend",
   "version": "1.0.0",
-  "description": "Sistema de Gestão de Alimentação Escolar",
+  "description": "Sistema de Gestão de Alimentação Escolar - Frontend",
   "scripts": {
     "build": "cd frontend && npm install && npm run build",
-    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
-    "start": "cd backend && npm start"
+    "dev": "cd frontend && npm run dev",
+    "preview": "cd frontend && npm run preview"
   },
-  "keywords": ["gestao", "escolar", "alimentacao", "react", "nodejs"],
+  "keywords": ["gestao", "escolar", "alimentacao", "react", "frontend"],
   "author": "ewesolon",
-  "license": "MIT",
-  "devDependencies": {
-    "concurrently": "^8.2.2"
-  }
+  "license": "MIT"
 }

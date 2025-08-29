@@ -1,0 +1,14 @@
+# Ignorar backend durante o build
+backend/
+mobile/
+docs/
+
+# Ignorar arquivos de desenvolvimento
+*.log
+.env
+.env.local
+node_modules/
+
+# Ignorar arquivos de configuração local
+.vscode/
+.idea/
