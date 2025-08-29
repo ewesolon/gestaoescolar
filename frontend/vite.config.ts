@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5173,
-    // Proxy direto para o IP correto
+    // Proxy para desenvolvimento local
     proxy: {
       '/api': {
         target: 'http://192.168.1.2:3000',
@@ -18,30 +18,42 @@ export default defineConfig({
         }
       }
     },
-    // CORS básico
     cors: true,
-    // Headers para forçar limpeza de cache
     headers: {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0',
       'Access-Control-Allow-Origin': '*'
     },
-    // Desabilitar completamente HMR
     hmr: false
   },
-  // Configurações mínimas de build
+  // Configurações de build otimizadas para Vercel
   build: {
     target: 'es2020',
-    minify: 'esbuild'
+    minify: 'esbuild',
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          mui: ['@mui/material', '@mui/icons-material'],
+          router: ['react-router-dom']
+        }
+      }
+    }
   },
-  // Configurações mínimas de otimização
+  // Base path para produção
+  base: '/',
+  // Otimizações
   optimizeDeps: {
     include: [
       'react',
       'react-dom',
       'react-router-dom',
       '@mui/material',
+      '@mui/icons-material',
       'axios'
     ]
   }
