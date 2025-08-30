@@ -1,21 +1,31 @@
 // Configuração centralizada do frontend
+const isVercel = import.meta.env.VITE_VERCEL === 'true';
+const isDevelopment = import.meta.env.DEV;
+const isProduction = import.meta.env.PROD;
+
 export const config = {
   // Configurações da API
-  apiUrl: import.meta.env.VITE_API_URL || "/api",
-  healthUrl: import.meta.env.VITE_HEALTH_URL || "/health",
+  apiUrl: isVercel 
+    ? import.meta.env.VITE_API_URL || "https://your-backend.vercel.app/api"
+    : import.meta.env.VITE_API_URL || "/api",
+  
+  healthUrl: isVercel
+    ? import.meta.env.VITE_HEALTH_URL || "https://your-backend.vercel.app/health"
+    : import.meta.env.VITE_HEALTH_URL || "/health",
 
   // Configurações do app
   appName: import.meta.env.VITE_APP_NAME || "Sistema de Alimentação Escolar",
   appVersion: import.meta.env.VITE_APP_VERSION || "1.0.0",
 
   // Configurações de timeout
-  timeout: 10000,
+  timeout: 15000, // Aumentado para Vercel
   retryAttempts: 3,
   retryDelay: 1000,
 
   // Configurações de ambiente
-  isDevelopment: import.meta.env.DEV,
-  isProduction: import.meta.env.PROD,
+  isDevelopment,
+  isProduction,
+  isVercel,
 
   // URLs completas
   get baseApiUrl() {

@@ -125,4 +125,11 @@ Desktop.ini
 *.bak
 
 # Local configuration
-config.local.json
+config.local.json# Verc
+el
+.vercel
+.vercel.json.backup
+
+# PostgreSQL
+*.sql.backup
+pg_data/
