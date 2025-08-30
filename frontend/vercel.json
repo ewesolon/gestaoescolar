@@ -15,7 +15,7 @@
     },
     {
       "src": "/api/(.*)",
-      "dest": "https://your-backend.vercel.app/api/$1"
+      "dest": "https://gestaoescolar-xtu1.vercel.app/api/$1"
     },
     {
       "src": "/(.*)",
