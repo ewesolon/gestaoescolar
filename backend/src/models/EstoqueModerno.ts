@@ -73,8 +73,8 @@ export async function createEstoqueModernoTables() {
       recebimento_id INTEGER,
       observacoes TEXT,
       status VARCHAR(20) NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'vencido', 'bloqueado', 'esgotado')),
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
       FOREIGN KEY (produto_id) REFERENCES produtos(id),
       FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id),
       CONSTRAINT uk_produto_lote UNIQUE(produto_id, lote)
@@ -94,7 +94,7 @@ export async function createEstoqueModernoTables() {
       motivo TEXT NOT NULL,
       documento_referencia TEXT,
       usuario_id INTEGER NOT NULL,
-      data_movimentacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      data_movimentacao TIMESTAMP DEFAULT NOW(),
       observacoes TEXT,
       FOREIGN KEY (lote_id) REFERENCES estoque_lotes(id),
       FOREIGN KEY (produto_id) REFERENCES produtos(id)
@@ -111,7 +111,7 @@ export async function createEstoqueModernoTables() {
       nivel VARCHAR(20) NOT NULL CHECK (nivel IN ('info', 'warning', 'critical')),
       titulo TEXT NOT NULL,
       descricao TEXT NOT NULL,
-      data_alerta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      data_alerta TIMESTAMP DEFAULT NOW(),
       visualizado BOOLEAN DEFAULT FALSE,
       resolvido BOOLEAN DEFAULT FALSE,
       FOREIGN KEY (produto_id) REFERENCES produtos(id),
@@ -136,7 +136,7 @@ export async function createEstoqueModernoTables() {
     CREATE OR REPLACE FUNCTION update_estoque_lotes_timestamp()
     RETURNS TRIGGER AS $$
     BEGIN
-      NEW.updated_at = CURRENT_TIMESTAMP;
+      NEW.updated_at = NOW();
       RETURN NEW;
     END;
     $$ LANGUAGE plpgsql;

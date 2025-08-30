@@ -80,13 +80,13 @@ export class EstoqueLotesORM extends BaseModel {
       type: 'TIMESTAMP' as const,
       nullable: true
 ,
-      default: 'CURRENT_TIMESTAMP'
+      default: 'NOW()'
     },
     updated_at: {
       type: 'TIMESTAMP' as const,
       nullable: true
 ,
-      default: 'CURRENT_TIMESTAMP'
+      default: 'NOW()'
     },
     recebimento_id: {
       type: 'INTEGER' as const,

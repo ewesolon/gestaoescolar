@@ -87,10 +87,10 @@ export abstract class BaseModel {
 
       // Default
       if (field.default !== undefined) {
-        if (typeof field.default === 'string') {
+        if (field.default === 'CURRENT_TIMESTAMP' || field.default === 'NOW()') {
+          columnDef += ' DEFAULT NOW()';
+        } else if (typeof field.default === 'string') {
           columnDef += ` DEFAULT '${field.default}'`;
-        } else if (field.default === 'CURRENT_TIMESTAMP') {
-          columnDef += ' DEFAULT CURRENT_TIMESTAMP';
         } else {
           columnDef += ` DEFAULT ${field.default}`;
         }

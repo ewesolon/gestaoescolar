@@ -76,7 +76,7 @@ export class EstoqueMovimentacoesORM extends BaseModel {
       type: 'TIMESTAMP' as const,
       nullable: true
 ,
-      default: 'CURRENT_TIMESTAMP'
+      default: 'NOW()'
     },
     observacoes: {
       type: 'TEXT' as const,
