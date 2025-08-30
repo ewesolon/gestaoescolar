@@ -292,10 +292,11 @@ async function iniciarServidor() {
       const { initEstoqueModerno } = await import('./controllers/estoqueModernoController');
       await initEstoqueModerno();
 
-      // Inicializar tabelas de rotas
-      const { createRotasTables } = await import('./models/Rota');
-      await createRotasTables();
-      console.log('✅ Tabelas de rotas criadas com sucesso');
+      // Inicializar tabelas de rotas - DESABILITADO temporariamente
+      // const { createRotasTables } = await import('./models/Rota');
+      // await createRotasTables();
+      // console.log('✅ Tabelas de rotas criadas com sucesso');
+      console.log('⚠️ Módulo de rotas desabilitado temporariamente');
 
       console.log('✅ Módulos inicializados com sucesso!');
 
