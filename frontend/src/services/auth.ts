@@ -12,18 +12,8 @@ export async function login(email: string, password: string) {
     console.log("✅ Login realizado com sucesso");
     return data.data || data; // Handle both new format {success, data} and old format
   } catch (err) {
-    console.log("⚠️ Primeira tentativa falhou, tentando rota alternativa...");
-    try {
-      const { data } = await apiWithRetry.post("/usuarios/login", {
-        email,
-        senha: password,
-      });
-      console.log("✅ Login realizado com sucesso (rota alternativa)");
-      return data.data || data; // Handle both new format {success, data} and old format
-    } catch (secondErr) {
-      console.error("❌ Login falhou em ambas as rotas");
-      throw secondErr;
-    }
+    console.error("❌ Login falhou:", err);
+    throw err;
   }
 }
 
@@ -42,15 +32,8 @@ export async function register(user: {
     console.log("✅ Registro realizado com sucesso");
     return data.data || data; // Handle both new format {success, data} and old format
   } catch (err) {
-    console.log("⚠️ Primeira tentativa falhou, tentando rota alternativa...");
-    try {
-      const { data } = await apiWithRetry.post("/usuarios/register", user);
-      console.log("✅ Registro realizado com sucesso (rota alternativa)");
-      return data.data || data; // Handle both new format {success, data} and old format
-    } catch (secondErr) {
-      console.error("❌ Registro falhou em ambas as rotas");
-      throw secondErr;
-    }
+    console.error("❌ Registro falhou:", err);
+    throw err;
   }
 }
 
