@@ -41,7 +41,7 @@ import saldoContratosRoutes from "./routes/saldoContratosRoutes";
 // Importar rotas preservadas do sistema escolar
 
 
-// Importar configuração PostgreSQL
+// Importar configuração PostgreSQL (Supabase)
 const db = require("./database");
 
 dotenv.config();

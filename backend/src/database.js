@@ -20,19 +20,18 @@ try {
   };
 }
 
-// Pool de conexões PostgreSQL
+// Pool de conexões PostgreSQL (Supabase)
 const pool = new Pool({
-  user: config.database.user,
-  host: config.database.host,
-  database: config.database.name,
-  password: config.database.password,
-  port: config.database.port,
-  ssl: config.database.ssl,
+  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   
-  // Configurações do pool
-  max: 20,
+  // Configurações otimizadas para Supabase
+  max: 15, // Supabase suporta até 60 conexões no plano gratuito
+  min: 0,  // Não manter conexões ociosas
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
+  acquireTimeoutMillis: 10000,
+  allowExitOnIdle: true, // Para Vercel Serverless
 });
 
 // Função principal para queries
