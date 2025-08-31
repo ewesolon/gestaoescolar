@@ -488,6 +488,21 @@ export const pedidoModernoService = {
   }
 };
 
+// Função para formatar tipo de pedido
+export const formatarTipoPedido = (tipo?: string): string => {
+  if (!tipo) return 'Padrão';
+  
+  const tipos: { [key: string]: string } = {
+    'normal': 'Normal',
+    'urgente': 'Urgente',
+    'especial': 'Especial',
+    'emergencia': 'Emergência',
+    'padrao': 'Padrão'
+  };
+  
+  return tipos[tipo.toLowerCase()] || tipo;
+};
+
 // Utilitários para formatação (importados de types/pedidos.ts)
 export { 
   formatarStatusPedido, 

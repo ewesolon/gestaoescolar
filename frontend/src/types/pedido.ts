@@ -8,6 +8,11 @@ export interface Pedido {
   observacoes?: string;
   created_at: string;
   updated_at: string;
+  pedidos?: Pedido[]; // Para compatibilidade com algumas respostas da API
+}
+
+export interface PedidoModerno extends Pedido {
+  tipo_pedido?: string;
 }
 
 export interface CriarPedidoRequest {

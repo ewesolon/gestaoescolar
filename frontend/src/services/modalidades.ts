@@ -19,7 +19,7 @@ export async function listarModalidades(): Promise<Modalidade[]> {
   }
   // Fallback para o formato antigo (array direto)
   if (Array.isArray(data)) {
-    return data.data || data; // Handle both new format {success, data} and old format
+    return data; // Handle both new format {success, data} and old format
   }
   // Se não for nenhum dos formatos esperados, retornar array vazio
   console.warn('Formato de resposta inesperado para modalidades:', data);

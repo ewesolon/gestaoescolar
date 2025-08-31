@@ -55,5 +55,21 @@ export const useToast = () => {
     error,
     warning,
     info,
+    
+    // Função genérica showToast para compatibilidade
+    showToast: (type: 'success' | 'error' | 'warning' | 'info', title: string, message?: string, duration?: number) => {
+      switch (type) {
+        case 'success':
+          return success(title, message, duration);
+        case 'error':
+          return error(title, message, duration);
+        case 'warning':
+          return warning(title, message, duration);
+        case 'info':
+          return info(title, message, duration);
+        default:
+          return info(title, message, duration);
+      }
+    },
   };
 };

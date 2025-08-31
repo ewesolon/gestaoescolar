@@ -15,8 +15,12 @@ export interface CriarRefeicaoRequest {
   ativo?: boolean;
 }
 
-export interface AtualizarRefeicaoRequest extends Partial<CriarRefeicaoRequest> {
+export interface AtualizarRefeicaoRequest {
   id: number;
+  nome?: string;
+  descricao?: string;
+  tipo?: 'cafe_manha' | 'almoco' | 'lanche_tarde' | 'jantar' | 'ceia';
+  ativo?: boolean;
 }
 
 export interface RefeicaoProduto {

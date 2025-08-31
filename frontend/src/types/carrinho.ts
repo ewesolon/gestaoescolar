@@ -53,6 +53,7 @@ export interface AtualizarQuantidadeRequest {
 }
 
 export interface ConfirmarPedidoRequest {
+  fornecedor_id?: number;
   observacoes?: string;
   data_entrega_prevista?: string | null;
 }
@@ -64,7 +65,7 @@ export interface ConfirmarPedidoResponse {
     valor_total: number;
     status: string;
   };
-
+  numero_pedido?: string;
   total_fornecedores: number;
   valor_total: number;
 }

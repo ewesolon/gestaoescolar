@@ -18,6 +18,9 @@ export async function buscarProduto(id: number): Promise<Produto | null> {
   return data.data || null; // Return the actual data from the response
 }
 
+// Alias para compatibilidade
+export const getProdutoById = buscarProduto;
+
 export async function criarProduto(produto: CriarProdutoRequest): Promise<Produto> {
   const { data } = await apiWithRetry.post("/produtos", produto);
   return data.data || data; // Return the actual data from the response

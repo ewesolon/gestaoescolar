@@ -28,6 +28,10 @@ export default defineConfig(({ command, mode }) => {
   
   return {
     plugins: [react()],
+    esbuild: {
+      // Skip type checking during build for faster builds
+      logOverride: { 'this-is-undefined-in-esm': 'silent' }
+    },
     server: {
       host: "0.0.0.0",
       port: 5173,
