@@ -1,18 +1,12 @@
 import axios, { AxiosError } from "axios";
-import { config } from "../config";
+import { apiConfig, apiLog, apiError, checkApiHealth } from "../config/api";
 
-// Configuração carregada automaticamente
-
+// Usar a nova configuração de API
 export const checkBackendHealth = async (): Promise<boolean> => {
   try {
-    // Usar o proxy do Vite em vez de localhost direto
-    const healthUrl = config.apiUrl.replace('/api', '/health');
-    const response = await axios.get(healthUrl, {
-      timeout: 5000,
-    });
-    return response.status === 200;
+    return await checkApiHealth();
   } catch (error) {
-    console.error("❌ Health check falhou:", error);
+    apiError("Health check falhou:", error);
     return false;
   }
 };
@@ -21,7 +15,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const makeRequestWithRetry = async (
   requestFn: () => Promise<any>,
-  retries = 3
+  retries = apiConfig.retries
 ) => {
   for (let i = 0; i < retries; i++) {
     try {
@@ -46,8 +40,12 @@ const makeRequestWithRetry = async (
 };
 
 const api = axios.create({
-  baseURL: config.apiUrl,
-  timeout: 10000,
+  baseURL: apiConfig.baseURL,
+  timeout: apiConfig.timeout,
+  withCredentials: true, // Para suportar cookies/sessões
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
 // Interceptor de requisição
@@ -61,8 +59,8 @@ api.interceptors.request.use((config) => {
   }
 
   // Log em desenvolvimento
-  if (import.meta.env.DEV) {
-    console.log(`📡 ${config.method?.toUpperCase()} ${config.url}`, {
+  if (apiConfig.debug) {
+    apiLog(`📡 ${config.method?.toUpperCase()} ${config.url}`, {
       data: config.data,
       params: config.params,
     });
@@ -75,8 +73,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     // Log em desenvolvimento
-    if (import.meta.env.DEV) {
-      console.log(
+    if (apiConfig.debug) {
+      apiLog(
         `✅ ${response.config.method?.toUpperCase()} ${response.config.url}`,
         {
           status: response.status,
@@ -90,9 +88,9 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     if (!originalRequest) throw error;
 
-    // Log de erro em desenvolvimento
-    if (import.meta.env.DEV) {
-      console.error(
+    // Log de erro
+    if (apiConfig.debug) {
+      apiError(
         `❌ ${originalRequest.method?.toUpperCase()} ${originalRequest.url}`,
         {
           status: error.response?.status,

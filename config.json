@@ -4,13 +4,20 @@
       "host": "0.0.0.0",
       "port": 3000,
       "cors": {
-        "origin": true,
+        "origin": [
+          "http://localhost:5173",
+          "http://127.0.0.1:5173",
+          "http://192.168.1.2:5173",
+          "http://0.0.0.0:5173"
+        ],
         "credentials": true
       }
     },
     "frontend": {
+      "apiUrl": "http://localhost:3000/api",
+      "healthUrl": "http://localhost:3000/health",
       "proxy": {
-        "target": "http://192.168.1.2:3000",
+        "target": "http://localhost:3000",
         "changeOrigin": true,
         "secure": false
       }
@@ -27,22 +34,31 @@
       "host": "0.0.0.0",
       "port": 3000,
       "cors": {
-        "origin": ["http://192.168.1.2:5173"],
+        "origin": [
+          "https://gestaoescolar-frontend.vercel.app",
+          "https://gestaoescolar-frontend-git-main-ewenunes0-4923s-projects.vercel.app",
+          "https://*.vercel.app",
+          "http://localhost:5173",
+          "http://127.0.0.1:5173"
+        ],
         "credentials": true
       }
     },
     "frontend": {
+      "apiUrl": "https://gestaoescolar-xtu1-git-main-ewenunes0-4923s-projects.vercel.app/api",
+      "healthUrl": "https://gestaoescolar-xtu1-git-main-ewenunes0-4923s-projects.vercel.app/health",
       "proxy": {
-        "target": "http://192.168.1.2:3000",
+        "target": "https://gestaoescolar-xtu1-git-main-ewenunes0-4923s-projects.vercel.app",
         "changeOrigin": true,
-        "secure": false
+        "secure": true
       }
     },
     "database": {
-      "host": "localhost",
+      "host": "db.aswbqvyxsfecjdjfjodz.supabase.co",
       "port": 5432,
-      "name": "alimentacao_escolar",
-      "user": "postgres"
+      "name": "postgres",
+      "user": "postgres",
+      "ssl": true
     }
   }
 }

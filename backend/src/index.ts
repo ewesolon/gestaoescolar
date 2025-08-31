@@ -50,26 +50,50 @@ const app = express();
 app.use(express.json());
 
 // Configuração CORS usando config.json
-app.use(
-  cors({
-    origin: config.backend.cors.origin,
-    credentials: config.backend.cors.credentials,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Accept",
-      "Origin",
-      "Access-Control-Request-Method",
-      "Access-Control-Request-Headers"
-    ],
-    exposedHeaders: ["Content-Length", "X-Foo", "X-Bar"],
-    maxAge: 86400, // 24 horas
-    preflightContinue: false,
-    optionsSuccessStatus: 200
-  })
-);
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Permitir requisições sem origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Em desenvolvimento, permitir qualquer origem
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // Em produção, verificar lista de origens permitidas
+    const allowedOrigins = config.backend.cors.origin;
+    if (Array.isArray(allowedOrigins)) {
+      const isAllowed = allowedOrigins.some(allowedOrigin => {
+        if (allowedOrigin.includes('*')) {
+          // Suporte para wildcards como *.vercel.app
+          const pattern = allowedOrigin.replace(/\*/g, '.*');
+          return new RegExp(pattern).test(origin);
+        }
+        return allowedOrigin === origin;
+      });
+      return callback(null, isAllowed);
+    }
+    
+    return callback(null, allowedOrigins === true || allowedOrigins === origin);
+  },
+  credentials: config.backend.cors.credentials,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+    "Access-Control-Request-Method",
+    "Access-Control-Request-Headers"
+  ],
+  exposedHeaders: ["Content-Length", "X-Foo", "X-Bar"],
+  maxAge: 86400, // 24 horas
+  preflightContinue: false,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 
 // Middleware adicional para garantir CORS em desenvolvimento
 if (process.env.NODE_ENV === 'development') {

@@ -5,9 +5,28 @@ const { Pool } = require('pg');
 const app = express();
 app.use(express.json());
 
-// Configuração CORS simples para produção
-app.use(cors({
-  origin: '*',
+// Configuração CORS para produção
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Permitir requisições sem origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Lista de origens permitidas em produção
+    const allowedOrigins = [
+      'https://gestaoescolar-frontend.vercel.app',
+      'https://gestaoescolar-frontend-git-main-ewenunes0-4923s-projects.vercel.app',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173'
+    ];
+    
+    // Verificar se a origem está na lista ou é um subdomínio do Vercel
+    const isAllowed = allowedOrigins.includes(origin) || 
+                     origin.endsWith('.vercel.app') ||
+                     origin.includes('localhost') ||
+                     origin.includes('127.0.0.1');
+    
+    callback(null, isAllowed);
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: [
@@ -16,8 +35,13 @@ app.use(cors({
     "X-Requested-With",
     "Accept",
     "Origin"
-  ]
-}));
+  ],
+  exposedHeaders: ["Content-Length"],
+  maxAge: 86400,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 
 // Pool de conexões PostgreSQL (Supabase)
 const pool = new Pool({
