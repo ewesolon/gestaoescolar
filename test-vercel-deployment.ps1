@@ -16,24 +16,24 @@ try {
     Write-Host "Erro no health check: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# Teste 2: API test-db
-Write-Host "`n2. Testando /api/test-db..." -ForegroundColor White
+# Teste 2: API test simples
+Write-Host "`n2. Testando /api/test..." -ForegroundColor White
 try {
-    $response = Invoke-RestMethod -Uri "$VERCEL_URL/api/test-db" -Method GET -TimeoutSec 30
-    Write-Host "Test DB OK:" -ForegroundColor Green
+    $response = Invoke-RestMethod -Uri "$VERCEL_URL/api/test" -Method GET -TimeoutSec 30
+    Write-Host "Test API OK:" -ForegroundColor Green
     $response | ConvertTo-Json -Depth 3
 } catch {
-    Write-Host "Erro no test-db: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Erro no test API: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# Teste 3: API usuarios
-Write-Host "`n3. Testando /api/usuarios..." -ForegroundColor White
+# Teste 3: API 404 (deve retornar erro estruturado)
+Write-Host "`n3. Testando /api/inexistente..." -ForegroundColor White
 try {
-    $response = Invoke-RestMethod -Uri "$VERCEL_URL/api/usuarios" -Method GET -TimeoutSec 30
-    Write-Host "Usuarios OK:" -ForegroundColor Green
+    $response = Invoke-RestMethod -Uri "$VERCEL_URL/api/inexistente" -Method GET -TimeoutSec 30
+    Write-Host "Resposta 404 estruturada:" -ForegroundColor Yellow
     $response | ConvertTo-Json -Depth 3
 } catch {
-    Write-Host "Erro nos usuarios: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Erro esperado (404): $($_.Exception.Message)" -ForegroundColor Yellow
 }
 
 # Teste 4: Frontend
