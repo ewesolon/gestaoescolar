@@ -7,9 +7,9 @@ $VERCEL_URL = "https://gestaoescolar-xtu1-git-main-ewenunes0-4923s-projects.verc
 Write-Host "`nTestando endpoints..." -ForegroundColor Yellow
 
 # Teste 1: Health check
-Write-Host "`n1. Testando /health..." -ForegroundColor White
+Write-Host "`n1. Testando /api/health..." -ForegroundColor White
 try {
-    $response = Invoke-RestMethod -Uri "$VERCEL_URL/health" -Method GET -TimeoutSec 30
+    $response = Invoke-RestMethod -Uri "$VERCEL_URL/api/health" -Method GET -TimeoutSec 30
     Write-Host "Health check OK:" -ForegroundColor Green
     $response | ConvertTo-Json -Depth 3
 } catch {
