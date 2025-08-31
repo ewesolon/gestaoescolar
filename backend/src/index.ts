@@ -330,5 +330,13 @@ async function iniciarServidor() {
   }
 }
 
-// Inicializar
-iniciarServidor();
+// Exportar app para Vercel
+export default app;
+
+// Para compatibilidade CommonJS
+module.exports = app;
+
+// Inicializar apenas se não estiver no Vercel
+if (process.env.VERCEL !== '1') {
+  iniciarServidor();
+}
