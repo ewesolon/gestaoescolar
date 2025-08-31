@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gestão Escolar - Teste</title>
+</head>
+<body>
+    <h1>Sistema de Gestão Escolar</h1>
+    <p>Teste de deployment - Se você está vendo isso, o Vercel está funcionando!</p>
+    <p>Timestamp: <span id="timestamp"></span></p>
+    
+    <h2>Testes de API</h2>
+    <button onclick="testAPI()">Testar API</button>
+    <div id="result"></div>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toISOString();
+        
+        async function testAPI() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Testando...';
+            
+            try {
+                const response = await fetch('/api/hello');
+                const data = await response.json();
+                result.innerHTML = `<p style="color: green;">API OK: ${JSON.stringify(data)}</p>`;
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">Erro na API: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -16,8 +16,18 @@ try {
     Write-Host "Erro no health check: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# Teste 2: API test simples
-Write-Host "`n2. Testando /api/test..." -ForegroundColor White
+# Teste 2: API hello (mais simples)
+Write-Host "`n2. Testando /api/hello..." -ForegroundColor White
+try {
+    $response = Invoke-RestMethod -Uri "$VERCEL_URL/api/hello" -Method GET -TimeoutSec 30
+    Write-Host "Hello API OK:" -ForegroundColor Green
+    $response | ConvertTo-Json -Depth 3
+} catch {
+    Write-Host "Erro no hello API: $($_.Exception.Message)" -ForegroundColor Red
+}
+
+# Teste 2b: API test
+Write-Host "`n2b. Testando /api/test..." -ForegroundColor White
 try {
     $response = Invoke-RestMethod -Uri "$VERCEL_URL/api/test" -Method GET -TimeoutSec 30
     Write-Host "Test API OK:" -ForegroundColor Green
