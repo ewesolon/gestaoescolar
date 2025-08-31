@@ -8,7 +8,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://192.168.1.2:3000',
+        target: process.env.VITE_API_URL || 'gestaoescolar-xtu1-git-main-ewenunes0-4923s-projects.vercel.app',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, '/api')
