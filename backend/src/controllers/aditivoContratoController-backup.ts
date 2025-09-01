@@ -1,32 +1,33 @@
 import { Request, Response } from "express";
-const db = require("../database");
+const { db } = require("../database");
 import { aplicarAditivoQuantidadeGlobal, aplicarAditivoQuantidadeEspecifica, deleteAditivoContrato, reaplicarAditivo, validarLimitesAditivo } from "../models/AditivoContrato";
 
 export async function listarAditivosContrato(req: Request, res: Response) {
   try {
     const { contrato_id } = req.params;
     const { tipo, aprovado, page = 1, limit = 50 } = req.query;
-
+    
     let whereClause = 'a.contrato_id = $1 AND a.ativo = true';
     const params: any[] = [contrato_id];
     let paramCount = 1;
-
+    
     // Filtro por tipo
     if (tipo) {
       paramCount++;
       whereClause += ` AND a.tipo = $${paramCount}`;
       params.push(tipo);
     }
-
+    
     // Filtro por aprovação
     if (aprovado !== undefined) {
+      paramCount++;
       if (aprovado === 'true') {
         whereClause += ` AND a.aprovado_por IS NOT NULL`;
       } else {
         whereClause += ` AND a.aprovado_por IS NULL`;
       }
     }
-
+    
     // Paginação
     const offset = (Number(page) - 1) * Number(limit);
     paramCount++;
@@ -34,7 +35,7 @@ export async function listarAditivosContrato(req: Request, res: Response) {
     paramCount++;
     const offsetParam = paramCount;
     params.push(Number(limit), offset);
-
+    
     const aditivosResult = await db.query(`
       SELECT 
         a.id,
@@ -92,7 +93,7 @@ export async function listarAditivosContrato(req: Request, res: Response) {
     });
   } catch (error) {
     console.error('❌ Erro ao listar aditivos:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
       message: "Erro ao listar aditivos do contrato.",
       error: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -103,7 +104,7 @@ export async function listarAditivosContrato(req: Request, res: Response) {
 export async function buscarAditivo(req: Request, res: Response) {
   try {
     const { id } = req.params;
-
+    
     const aditivoResult = await db.query(`
       SELECT 
         a.*,
@@ -128,7 +129,7 @@ export async function buscarAditivo(req: Request, res: Response) {
     });
   } catch (error) {
     console.error('❌ Erro ao buscar aditivo:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
       message: "Erro ao buscar aditivo.",
       error: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -233,9 +234,9 @@ export async function criarAditivo(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('❌ Erro ao criar aditivo:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
-      message: "Erro ao criar aditivo.",
+      message: "Erro ao criar aditivo.", 
       error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
@@ -276,7 +277,7 @@ export async function editarAditivo(req: Request, res: Response) {
     // Validar limites legais para aditivos de quantidade (excluindo o aditivo atual)
     if ((tipo === 'QUANTIDADE' || tipo === 'MISTO') && percentual_acrescimo) {
       const validacao = await validarLimitesAditivo(contrato_id, tipo, percentual_acrescimo, parseInt(id as string));
-
+      
       if (!validacao.valido) {
         return res.status(400).json({
           success: false,
@@ -328,9 +329,9 @@ export async function editarAditivo(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('❌ Erro ao editar aditivo:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
-      message: "Erro ao editar aditivo.",
+      message: "Erro ao editar aditivo.", 
       error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
@@ -341,11 +342,11 @@ export async function removerAditivo(req: Request, res: Response) {
     const { id } = req.params;
 
     // Verificar se o aditivo existe antes de tentar remover
-    const aditivoExistente = await db.query(`
+    const aditivoExistente = await db.get(`
       SELECT * FROM aditivos_contratos WHERE id = $1
     `, [id]);
 
-    if (aditivoExistente.rows.length === 0) {
+    if (!aditivoExistente) {
       return res.status(404).json({
         success: false,
         message: "Aditivo não encontrado"
@@ -361,7 +362,7 @@ export async function removerAditivo(req: Request, res: Response) {
     });
   } catch (error) {
     console.error('❌ Erro ao remover aditivo:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
       message: "Erro ao remover aditivo.",
       error: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -375,11 +376,11 @@ export async function aprovarAditivo(req: Request, res: Response) {
     const { observacoes } = req.body;
 
     // Buscar o aditivo antes de aprovar
-    const aditivoExistente = await db.query(`
+    const aditivoExistente = await db.get(`
       SELECT * FROM aditivos_contratos WHERE id = $1
     `, [id]);
 
-    if (aditivoExistente.rows.length === 0) {
+    if (!aditivoExistente) {
       return res.status(404).json({
         success: false,
         message: "Aditivo não encontrado"
@@ -401,14 +402,14 @@ export async function aprovarAditivo(req: Request, res: Response) {
     if ((aditivoAprovado.tipo === 'QUANTIDADE' || aditivoAprovado.tipo === 'MISTO') && aditivoAprovado.percentual_acrescimo) {
       try {
         // Verificar se já existem itens aplicados para este aditivo
-        const itensExistentes = await db.query(`
+        const itensExistentes = await db.all(`
           SELECT * FROM aditivos_contratos_itens WHERE aditivo_id = $1
         `, [id]);
 
-        if (itensExistentes.rows.length === 0) {
+        if (itensExistentes.length === 0) {
           // Buscar itens específicos se existirem
           const itensEspecificos = req.body.itens_especificos;
-
+          
           if (itensEspecificos && itensEspecificos.length > 0) {
             // Aplicar aditivo específico
             console.log(`🔄 Aplicando aditivo específico na aprovação ID: ${id}`);
@@ -436,9 +437,9 @@ export async function aprovarAditivo(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('❌ Erro ao aprovar aditivo:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
-      message: "Erro ao aprovar aditivo.",
+      message: "Erro ao aprovar aditivo.", 
       error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
@@ -475,9 +476,9 @@ export async function validarLimites(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('❌ Erro ao validar limites:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
-      message: "Erro ao validar limites.",
+      message: "Erro ao validar limites.", 
       error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
@@ -486,30 +487,30 @@ export async function validarLimites(req: Request, res: Response) {
 export async function obterQuantidadesComAditivos(req: Request, res: Response) {
   try {
     const { contrato_id } = req.params;
-
+    
     // Simplified response - return basic contract products
-    const produtos = await db.query(`
+    const produtos = await db.all(`
       SELECT 
         cp.id,
         cp.produto_id,
-        cp.quantidade_contratada as quantidade_original,
-        cp.preco_unitario as preco,
+        cp.limite as quantidade_original,
+        cp.preco,
         p.nome as produto_nome
       FROM contrato_produtos cp
       LEFT JOIN produtos p ON cp.produto_id = p.id
       WHERE cp.contrato_id = $1
     `, [contrato_id]);
-
+    
     res.json({
       success: true,
       contrato_id: Number(contrato_id),
-      produtos: produtos.rows
+      produtos: produtos
     });
   } catch (error: any) {
     console.error('❌ Erro ao calcular quantidades com aditivos:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
-      message: "Erro ao calcular quantidades com aditivos.",
+      message: "Erro ao calcular quantidades com aditivos.", 
       error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
@@ -518,36 +519,30 @@ export async function obterQuantidadesComAditivos(req: Request, res: Response) {
 export async function obterProdutosContrato(req: Request, res: Response) {
   try {
     const { contrato_id } = req.params;
-
-    console.log('🔍 Buscando produtos para contrato ID:', contrato_id);
-
-    const produtos = await db.query(`
+    
+    const produtos = await db.all(`
       SELECT 
         cp.id as contrato_produto_id,
         cp.produto_id,
-        cp.quantidade_contratada as quantidade_atual,
-        cp.preco_unitario as preco,
+        cp.limite as quantidade_atual,
+        cp.preco,
         p.nome as produto_nome,
-        p.unidade as produto_unidade,
-        (cp.quantidade_contratada * cp.preco_unitario) as valor_total
+        p.unidade_medida as produto_unidade,
+        (cp.limite * cp.preco) as valor_total
       FROM contrato_produtos cp
       LEFT JOIN produtos p ON cp.produto_id = p.id
       WHERE cp.contrato_id = $1
-      ORDER BY p.nome
     `, [contrato_id]);
-
-    console.log('📦 Produtos encontrados:', produtos.rows.length);
-    console.log('📋 Produtos:', produtos.rows);
-
+    
     res.json({
       success: true,
-      data: produtos.rows
+      data: produtos
     });
   } catch (error: any) {
     console.error('❌ Erro ao buscar produtos do contrato:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
-      message: "Erro ao buscar produtos do contrato.",
+      message: "Erro ao buscar produtos do contrato.", 
       error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
@@ -615,9 +610,9 @@ export async function obterEstatisticasAditivos(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('❌ Erro ao obter estatísticas de aditivos:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
-      message: "Erro ao obter estatísticas de aditivos.",
+      message: "Erro ao obter estatísticas de aditivos.", 
       error: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }

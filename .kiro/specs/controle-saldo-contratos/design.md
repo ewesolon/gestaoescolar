@@ -2,20 +2,20 @@
 
 ## Overview
 
-Esta funcionalidade reformula o sistema de controle de saldo de fornecedores para ser baseado nos contratos individuais, permitindo controle granular por item contratado com sistema de movimentações para registrar o consumo dos produtos. O sistema atual de saldo financeiro será mantido, mas será criado um novo módulo específico para controle de estoque/consumo dos produtos contratados.
+Esta funcionalidade reformula o sistema de controle de saldo de fornecedores para ser baseado nos contratos individuais, permitindo controle granular por item contratado com sistema de movimentações para registrar o consumo dos produtos. O sistema atual de saldo de fornecedores será mantido, mas será criado um novo módulo específico para controle de estoque/consumo dos produtos contratados.
 
 ## Architecture
 
 ### Separação de Responsabilidades
 
-1. **Saldo Financeiro** (existente): Controla valores monetários (créditos, débitos, pagamentos)
+1. **Saldo de Fornecedores** (existente): Controla valores monetários (créditos, débitos, pagamentos)
 2. **Saldo de Contratos** (novo): Controla quantidades de produtos disponíveis nos contratos
 
 ### Estrutura de Dados
 
 ```
 Fornecedor
-├── Saldo Financeiro (existente)
+├── Saldo de Fornecedor (existente)
 └── Contratos
     ├── Contrato 1
     │   ├── Item A (quantidade disponível)
@@ -323,7 +323,7 @@ GET /api/contratos/:id/relatorio-saldo
 
 ### Sistema Existente
 
-1. **Saldo Financeiro**: Mantém funcionamento independente
+1. **Saldo de Fornecedores**: Mantém funcionamento independente
 2. **Contratos**: Utiliza dados existentes de contratos e produtos
 3. **Aditivos**: Integra com sistema de aditivos para cálculo correto das quantidades
 4. **Usuários**: Utiliza sistema de autenticação existente

@@ -23,9 +23,8 @@ const ROUTE_MODULE_MAP: { [key: string]: string } = {
   '/api/recebimentos': 'DELIVERY',
   '/api/recebimentos-modernos': 'DELIVERY',
   '/api/controle-qualidade': 'QUALITY',
-  '/api/financeiro': 'FINANCIAL',
 
-  '/api/movimentacoes-consumo': 'FINANCIAL',
+  '/api/movimentacoes-consumo': 'INVENTORY',
   '/api/estoque': 'INVENTORY',
   '/api/alertas': 'REPORTING'
   // '/api/relatorios': 'REPORTING' - removido, módulo de relatórios descontinuado

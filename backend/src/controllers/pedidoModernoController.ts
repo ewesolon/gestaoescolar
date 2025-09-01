@@ -151,7 +151,6 @@ export async function listarPedidos(req: Request, res: Response) {
         pm.valor_total,
         pm.observacoes,
         pm.created_at as data_criacao,
-        pm.updated_at as data_atualizacao,
         COALESCE(u.nome, 'Usuário não encontrado') as nome_usuario,
         0 as total_fornecedores,
         0 as total_itens,
@@ -240,7 +239,6 @@ export async function buscarPedido(req: Request, res: Response) {
         pm.valor_total,
         pm.observacoes,
         pm.created_at as data_criacao,
-        pm.updated_at as data_atualizacao,
         u.nome as nome_usuario
       FROM pedidos pm
       INNER JOIN usuarios u ON pm.usuario_id = u.id
@@ -401,9 +399,7 @@ export async function atualizarStatus(req: Request, res: Response) {
     const result = await db.query(`
       UPDATE pedidos 
       SET status = $1, 
-          observacoes = COALESCE($2, observacoes),
-          updated_at = CURRENT_TIMESTAMP,
-          atualizado_por = 'Sistema'
+          observacoes = COALESCE($2, observacoes)
       WHERE id = $3
       RETURNING *
     `, [statusValidado, observacoes, pedidoId]);
@@ -580,9 +576,7 @@ export async function cancelarPedido(req: Request, res: Response) {
     const result = await db.query(`
       UPDATE pedidos 
       SET status = 'CANCELADO',
-          observacoes = COALESCE(observacoes || ' | ', '') || 'CANCELADO: ' || $1,
-          updated_at = CURRENT_TIMESTAMP,
-          atualizado_por = 'Sistema'
+          observacoes = COALESCE(observacoes || ' | ', '') || 'CANCELADO: ' || $1
       WHERE id = $2
       RETURNING *
     `, [motivoSanitizado, pedidoId]);
@@ -650,8 +644,7 @@ export async function confirmarPedido(req: Request, res: Response) {
     
     const result = await db.query(`
       UPDATE pedidos 
-      SET status = 'CONFIRMADO',
-          updated_at = CURRENT_TIMESTAMP
+      SET status = 'CONFIRMADO'
       WHERE id = $1
       RETURNING *
     `, [pedidoId]);
@@ -714,9 +707,7 @@ export async function atualizarObservacoes(req: Request, res: Response) {
     
     const result = await db.query(`
       UPDATE pedidos 
-      SET observacoes = $1,
-          updated_at = CURRENT_TIMESTAMP,
-          atualizado_por = 'Sistema'
+      SET observacoes = $1
       WHERE id = $2
       RETURNING *
     `, [observacoesSanitizadas, pedidoId]);

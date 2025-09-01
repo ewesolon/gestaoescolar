@@ -60,8 +60,8 @@ export async function listarPedidosPendentes(req: Request, res: Response) {
         LEFT JOIN pedidos_fornecedores pf ON pm.id = pf.pedido_id
         LEFT JOIN pedidos_itens pi ON pf.id = pi.pedido_fornecedor_id
         LEFT JOIN (
-          SELECT pedido_item_id, SUM(quantidade_recebida) as total_recebido
-          FROM recebimentos_simples
+          SELECT pedido_item_id, SUM(COALESCE(quantidade_recebida, 0)) as total_recebido
+          FROM recebimento_itens_controle
           GROUP BY pedido_item_id
         ) recebimentos ON pi.id = recebimentos.pedido_item_id
         ${whereClause}
@@ -135,8 +135,8 @@ export async function listarPedidosRecebidos(req: Request, res: Response) {
         LEFT JOIN (
           SELECT 
             pedido_item_id,
-            SUM(quantidade_recebida) as total_recebido
-          FROM recebimentos_simples 
+            SUM(COALESCE(quantidade_recebida, 0)) as total_recebido
+          FROM recebimento_itens_controle 
           GROUP BY pedido_item_id
         ) recebimentos_agrupados ON pi.id = recebimentos_agrupados.pedido_item_id
         WHERE p.status = 'CONFIRMADO'
@@ -170,8 +170,8 @@ export async function listarPedidosRecebidos(req: Request, res: Response) {
         LEFT JOIN (
           SELECT 
             pedido_item_id,
-            SUM(quantidade_recebida) as total_recebido
-          FROM recebimentos_simples 
+            SUM(COALESCE(quantidade_recebida, 0)) as total_recebido
+          FROM recebimento_itens_controle 
           GROUP BY pedido_item_id
         ) recebimentos_agrupados ON pi.id = recebimentos_agrupados.pedido_item_id
         LEFT JOIN fornecedores f ON pf.fornecedor_id = f.id
@@ -190,7 +190,7 @@ export async function listarPedidosRecebidos(req: Request, res: Response) {
         pm.valor_total,
         stats.fornecedor_nome,
         stats.total_fornecedores,
-        pm.updated_at AS data_ultimo_recebimento,
+        pm.created_at AS data_ultimo_recebimento,
         stats.total_itens,
         stats.total_recebimentos,
         stats.valor_total_pedido,
@@ -303,7 +303,7 @@ export async function listarItensRecebimento(req: Request, res: Response) {
       LEFT JOIN pedidos_fornecedores pf ON pi.pedido_fornecedor_id = pf.id
       LEFT JOIN pedidos pm ON pf.pedido_id = pm.id
       LEFT JOIN produtos p ON pi.produto_id = p.id
-      LEFT JOIN recebimentos_simples rs ON pi.id = rs.pedido_item_id
+      LEFT JOIN recebimento_itens_controle rs ON pi.id = rs.pedido_item_id
       LEFT JOIN pedidos_faturamentos_controle pfc ON pf.pedido_id = pfc.pedido_id
       LEFT JOIN fornecedores f ON COALESCE(pfc.fornecedor_id, pf.fornecedor_id) = f.id
       WHERE pf.pedido_id = $1
@@ -398,24 +398,10 @@ export async function receberItem(req: Request, res: Response) {
     
     const itemData = item.rows[0];
     
-    // Criar uma tabela simples de controle de recebimentos se não existir
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS recebimentos_simples (
-        id SERIAL PRIMARY KEY,
-        pedido_item_id INTEGER NOT NULL,
-        quantidade_recebida NUMERIC NOT NULL,
-        numero_lote VARCHAR(100),
-        data_validade DATE,
-        observacoes TEXT,
-        usuario_id INTEGER DEFAULT 1,
-        data_recebimento TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
     // Verificar quantidade já recebida para este item
     const quantidadeJaRecebida = await db.query(`
-      SELECT COALESCE(SUM(quantidade_recebida), 0) as total_recebido
-      FROM recebimentos_simples 
+      SELECT COALESCE(quantidade_recebida, 0) as total_recebido
+      FROM recebimento_itens_controle 
       WHERE pedido_item_id = $1
     `, [pedido_item_id]);
     
@@ -439,10 +425,15 @@ export async function receberItem(req: Request, res: Response) {
     }
     
     // Inserir novo recebimento
+    // Atualizar recebimento no controle existente
     await db.query(`
-      INSERT INTO recebimentos_simples (
-        pedido_item_id, quantidade_recebida, numero_lote, data_validade, observacoes, usuario_id
-      ) VALUES ($1, $2, $3, $4, $5, 1)
+      UPDATE recebimento_itens_controle 
+      SET quantidade_recebida = COALESCE(quantidade_recebida, 0) + $2,
+          data_ultimo_recebimento = CURRENT_TIMESTAMP,
+          usuario_ultimo_recebimento = 1,
+          observacoes = COALESCE(observacoes, '') || CASE WHEN observacoes IS NOT NULL THEN '; ' ELSE '' END || $5,
+          status = CASE WHEN (COALESCE(quantidade_recebida, 0) + $2) >= quantidade_esperada THEN 'COMPLETO' ELSE 'PARCIAL' END
+      WHERE pedido_item_id = $1
     `, [pedido_item_id, parseFloat(quantidade), numero_lote || null, data_validade || null, observacoes || null]);
 
     // Integração com controle de consumo de contratos
@@ -691,7 +682,7 @@ export async function estatisticasPedido(req: Request, res: Response) {
           END as status_item
         FROM pedidos_fornecedores pf
         JOIN pedidos_itens pi ON pf.id = pi.pedido_fornecedor_id
-        LEFT JOIN recebimentos_simples rs ON pi.id = rs.pedido_item_id
+        LEFT JOIN recebimento_itens_controle rs ON pi.id = rs.pedido_item_id
         WHERE pf.pedido_id = $1
         GROUP BY pi.id, pi.quantidade
       )
@@ -776,15 +767,14 @@ export async function historicoItem(req: Request, res: Response) {
     
     const itemData = item.rows[0];
     
-    // Buscar todos os recebimentos deste item
+    // Buscar controle de recebimento deste item
     const recebimentos = await db.query(`
       SELECT 
         rs.*,
         u.nome as nome_usuario
-      FROM recebimentos_simples rs
-      LEFT JOIN usuarios u ON rs.usuario_id = u.id
+      FROM recebimento_itens_controle rs
+      LEFT JOIN usuarios u ON rs.usuario_ultimo_recebimento = u.id
       WHERE rs.pedido_item_id = $1
-      ORDER BY rs.data_recebimento ASC
     `, [pedido_item_id]);
     
     const historico = [];
@@ -906,7 +896,7 @@ async function atualizarStatusPedido(pedidoId: number) {
         COUNT(CASE WHEN pi.status = 'PENDENTE' THEN 1 END) as itens_pendentes
       FROM pedidos_itens pi
       JOIN pedidos_fornecedores pf ON pi.pedido_fornecedor_id = pf.id
-      LEFT JOIN recebimentos_simples rs ON pi.id = rs.pedido_item_id
+      LEFT JOIN recebimento_itens_controle rs ON pi.id = rs.pedido_item_id
       WHERE pf.pedido_id = $1
     `, [pedidoId]);
     

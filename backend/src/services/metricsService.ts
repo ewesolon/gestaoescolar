@@ -258,7 +258,7 @@ export class MetricsService {
         (SELECT COUNT(*) FROM estoque WHERE quantidade_atual <= quantidade_minima) as produtos_estoque_critico,
         (SELECT AVG(quantidade_atual / NULLIF(quantidade_minima, 0)) FROM estoque WHERE quantidade_minima > 0) as indice_cobertura_estoque,
         
-        -- Indicadores Financeiros
+        -- Indicadores de Pedidos
         (SELECT COALESCE(SUM(valor_total), 0) FROM pedidos WHERE status = 'entregue' AND DATE(updated_at) >= CURRENT_DATE - INTERVAL '30 days') as valor_pedidos_mes,
         (SELECT COALESCE(SUM(saldo_disponivel), 0) FROM contratos WHERE status = 'ativo') as saldo_total_contratos,
         

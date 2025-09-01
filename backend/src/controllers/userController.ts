@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { findUserByEmail, createUser, User } from "../models/User";
 import { config } from "../config/config";
+import db from "../config/database";
 
 // Registro de novo usuário
 export async function register(req: Request, res: Response) {
@@ -88,3 +89,65 @@ export async function login(req: Request, res: Response) {
     res.status(500).json({ message: "Erro ao fazer login." });
   }
 }
+
+// Listar todos os usuários
+export const getUsers = async (req: Request, res: Response) => {
+  try {
+    const result = await db.query(`
+      SELECT id, nome, email, tipo, ativo, created_at, updated_at
+      FROM usuarios 
+      ORDER BY nome
+    `);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Erro ao listar usuários:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao listar usuários',
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  }
+};
+
+// Obter perfil do usuário logado
+export const getProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token inválido'
+      });
+    }
+
+    const result = await db.query(`
+      SELECT id, nome, email, tipo, ativo, created_at, updated_at
+      FROM usuarios 
+      WHERE id = $1
+    `, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuário não encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Erro ao obter perfil:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao obter perfil do usuário',
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  }
+};

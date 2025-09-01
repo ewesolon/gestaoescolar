@@ -450,10 +450,10 @@ const RecebimentoDetalhe: React.FC = () => {
                     </Card>
                   </Box>
 
-                  {/* Resumo Financeiro */}
+                  {/* Resumo do Pedido */}
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                      Resumo Financeiro
+                      Resumo do Pedido
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                       <Card sx={{ bgcolor: '#f0fdf4', border: '1px solid #bbf7d0', p: 2 }}>

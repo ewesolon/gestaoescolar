@@ -38,6 +38,9 @@ import faturamentoModalidadesRoutes from "./routes/faturamentoModalidadesRoutes"
 import faturamentoInterfaceRoutes from "./routes/faturamentoInterface";
 import saldoContratosRoutes from "./routes/saldoContratosRoutes";
 
+// Importar rotas de migração
+const migrationRoutes = require("./routes/migrationRoutes");
+
 // Importar rotas preservadas do sistema escolar
 
 
@@ -227,6 +230,9 @@ app.use("/api/estoque-consolidado", estoqueConsolidadoRoutes);
 app.use("/api/faturamento-modalidades", faturamentoModalidadesRoutes);
 app.use("/api/faturamento-interface", faturamentoInterfaceRoutes);
 app.use("/api/saldos-contratos", saldoContratosRoutes);
+
+// Rotas de migração
+app.use("/api/migration", migrationRoutes);
 
 // Rotas preservadas do sistema escolar
 

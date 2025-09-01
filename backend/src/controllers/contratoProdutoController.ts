@@ -10,11 +10,11 @@ export async function listarContratoProdutos(req: Request, res: Response) {
         cp.contrato_id,
         cp.produto_id,
         cp.preco_unitario,
-        cp.limite,
-        cp.preco,
-        cp.saldo,
+        cp.quantidade_contratada as limite,
+        cp.preco_unitario as preco,
+        cp.quantidade_contratada as saldo,
         p.nome as produto_nome,
-        p.unidade_medida,
+        p.unidade as unidade_medida,
         c.numero as contrato_numero
       FROM contrato_produtos cp
       LEFT JOIN produtos p ON cp.produto_id = p.id
@@ -49,12 +49,12 @@ export async function listarProdutosPorContrato(req: Request, res: Response) {
         cp.contrato_id,
         cp.produto_id,
         cp.preco_unitario,
-        cp.limite,
-        cp.preco,
-        cp.saldo,
+        cp.quantidade_contratada as limite,
+        cp.preco_unitario as preco,
+        cp.quantidade_contratada as saldo,
         p.nome as produto_nome,
         p.descricao as produto_descricao,
-        p.unidade_medida,
+        p.unidade as unidade_medida,
         p.categoria,
         c.numero as contrato_numero,
         f.nome as fornecedor_nome
@@ -91,7 +91,7 @@ export async function buscarContratoProduto(req: Request, res: Response) {
       SELECT 
         cp.*,
         p.nome as produto_nome,
-        p.unidade_medida,
+        p.unidade as unidade_medida,
         c.numero as contrato_numero
       FROM contrato_produtos cp
       LEFT JOIN produtos p ON cp.produto_id = p.id
@@ -127,16 +127,15 @@ export async function criarContratoProduto(req: Request, res: Response) {
     const {
       contrato_id,
       produto_id,
-      limite,
-      preco,
-      saldo
+      quantidade_contratada,
+      preco_unitario
     } = req.body;
 
     const result = await db.query(`
-      INSERT INTO contrato_produtos (contrato_id, produto_id, preco_unitario, limite, preco, saldo)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO contrato_produtos (contrato_id, produto_id, preco_unitario, quantidade_contratada)
+      VALUES ($1, $2, $3, $4)
       RETURNING *
-    `, [contrato_id, produto_id, preco, limite, preco, saldo || limite]);
+    `, [contrato_id, produto_id, preco_unitario, quantidade_contratada]);
 
     res.json({
       success: true,
@@ -159,9 +158,8 @@ export async function editarContratoProduto(req: Request, res: Response) {
     const {
       contrato_id,
       produto_id,
-      limite,
-      preco,
-      saldo
+      quantidade_contratada,
+      preco_unitario
     } = req.body;
 
     const result = await db.query(`
@@ -169,12 +167,10 @@ export async function editarContratoProduto(req: Request, res: Response) {
         contrato_id = $1,
         produto_id = $2,
         preco_unitario = $3,
-        limite = $4,
-        preco = $5,
-        saldo = $6
-      WHERE id = $7
+        quantidade_contratada = $4
+      WHERE id = $5
       RETURNING *
-    `, [contrato_id, produto_id, preco, limite, preco, saldo, id]);
+    `, [contrato_id, produto_id, preco_unitario, quantidade_contratada, id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({

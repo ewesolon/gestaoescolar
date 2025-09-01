@@ -300,7 +300,7 @@ export async function deleteAditivoContrato(id: number) {
       
       // 1. Buscar os itens do aditivo antes de remover para reverter as quantidades
       const itensResult = await db.query(`
-        SELECT aci.*, cp.limite as quantidade_atual
+        SELECT aci.*, cp.quantidade_contratada as quantidade_atual
         FROM aditivos_contratos_itens aci
         JOIN contrato_produtos cp ON aci.contrato_produto_id = cp.id
         WHERE aci.aditivo_id = $1
@@ -315,9 +315,9 @@ export async function deleteAditivoContrato(id: number) {
         // Restaurar a quantidade original e reduzir o saldo
         await db.query(`
           UPDATE contrato_produtos 
-          SET limite = $1, saldo = saldo - $2
-          WHERE id = $3
-        `, [quantidadeOriginal, quantidadeAdicional, item.contrato_produto_id]);
+          SET quantidade_contratada = $1
+          WHERE id = $2
+        `, [quantidadeOriginal, item.contrato_produto_id]);
         
         console.log(`✅ Revertido produto ${item.contrato_produto_id}: ${item.quantidade_nova} → ${quantidadeOriginal}`);
       }
@@ -398,8 +398,8 @@ export async function calcularQuantidadesComAditivos(contrato_id: number) {
     SELECT 
       cp.id as contrato_produto_id,
       cp.produto_id,
-      cp.limite as quantidade_original,
-      cp.preco,
+      cp.quantidade_contratada as quantidade_original,
+      cp.preco_unitario as preco_unitario as preco,
       p.nome as produto_nome,
       p.unidade
     FROM contrato_produtos cp
@@ -471,10 +471,10 @@ export async function obterQuantidadeOriginalProduto(contrato_produto_id: number
   
   // Se não há aditivos, a quantidade atual é a original
   const produtoResult = await db.query(`
-    SELECT limite FROM contrato_produtos WHERE id = $1
+    SELECT quantidade_contratada FROM contrato_produtos WHERE id = $1
   `, [contrato_produto_id]);
   
-  return parseFloat(produtoResult.rows[0].limite);
+  return parseFloat(produtoResult.rows[0].quantidade_contratada);
 }
 
 export async function aplicarAditivoQuantidadeGlobal(aditivo_id: number, percentual_acrescimo: number) {
@@ -498,8 +498,8 @@ export async function aplicarAditivoQuantidadeGlobal(aditivo_id: number, percent
       const produtosResult = await db.query(`
         SELECT 
           cp.id as contrato_produto_id,
-          cp.limite as quantidade_atual,
-          cp.preco,
+          cp.quantidade_contratada as quantidade_atual,
+          cp.preco_unitario as preco_unitario as preco,
           p.nome as produto_nome
         FROM contrato_produtos cp
         JOIN produtos p ON cp.produto_id = p.id
@@ -556,9 +556,9 @@ export async function aplicarAditivoQuantidadeGlobal(aditivo_id: number, percent
       for (const item of itensAditivo) {
         await db.query(`
           UPDATE contrato_produtos 
-          SET limite = $1, saldo = saldo + $2
-          WHERE id = $3
-        `, [item.quantidade_nova, item.quantidade_adicional, item.contrato_produto_id]);
+          SET quantidade_contratada = $1
+          WHERE id = $2
+        `, [item.quantidade_nova, item.contrato_produto_id]);
       }
       
       await db.query('COMMIT');
@@ -605,8 +605,8 @@ export async function aplicarAditivoQuantidadeEspecifica(
         const produtoResult = await db.query(`
           SELECT 
             cp.id as contrato_produto_id,
-            cp.limite as quantidade_atual,
-            cp.preco,
+            cp.quantidade_contratada as quantidade_atual,
+            cp.preco_unitario as preco,
             p.nome as produto_nome
           FROM contrato_produtos cp
           JOIN produtos p ON cp.produto_id = p.id
@@ -659,9 +659,9 @@ export async function aplicarAditivoQuantidadeEspecifica(
       for (const item of itensAditivo) {
         await db.query(`
           UPDATE contrato_produtos 
-          SET limite = $1, saldo = saldo + $2
-          WHERE id = $3
-        `, [item.quantidade_nova, item.quantidade_adicional, item.contrato_produto_id]);
+          SET quantidade_contratada = $1
+          WHERE id = $2
+        `, [item.quantidade_nova, item.contrato_produto_id]);
       }
       
       await db.query('COMMIT');
@@ -684,11 +684,11 @@ export async function obterProdutosContratoParaAditivo(contrato_id: number) {
     SELECT 
       cp.id as contrato_produto_id,
       cp.produto_id,
-      cp.limite as quantidade_atual,
-      cp.preco,
+      cp.quantidade_contratada as quantidade_atual,
+      cp.preco_unitario as preco,
       p.nome as produto_nome,
       p.unidade as produto_unidade,
-      (cp.limite * cp.preco) as valor_total
+      (cp.limite * cp.preco_unitario as preco) as valor_total
     FROM contrato_produtos cp
     JOIN produtos p ON cp.produto_id = p.id
     WHERE cp.contrato_id = $1
@@ -779,8 +779,8 @@ export async function reaplicarAditivo(aditivo_id: number) {
       for (const item of itensAnteriores.rows) {
         await db.query(`
           UPDATE contrato_produtos 
-          SET limite = limite - $1, saldo = saldo - $2
-          WHERE id = $3
+          SET quantidade_contratada = quantidade_contratada - $1
+          WHERE id = $2
         `, [item.quantidade_adicional, item.quantidade_adicional, item.contrato_produto_id]);
       }
       

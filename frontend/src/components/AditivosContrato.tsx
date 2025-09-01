@@ -196,7 +196,9 @@ const AditivosContrato: React.FC<AditivosContratoProps> = ({
   const carregarProdutosContrato = async () => {
     try {
       setLoadingProdutos(true);
+      console.log('🔍 Carregando produtos para contrato ID:', contratoId);
       const produtos = await obterProdutosContrato(contratoId);
+      console.log('📦 Produtos carregados:', produtos);
       setProdutosContrato(produtos);
     } catch (error) {
       console.error("Erro ao carregar produtos do contrato:", error);

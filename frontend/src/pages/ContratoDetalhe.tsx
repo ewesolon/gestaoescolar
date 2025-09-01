@@ -93,7 +93,9 @@ export default function ContratoDetalhe() {
   // Função para calcular o valor total do contrato
   function calcularValorTotalContrato(produtos: any[]) {
     return produtos.reduce((total, produto) => {
-      const valorProduto = (produto.limite || 0) * (produto.preco || 0);
+      const limite = produto.limite || produto.quantidade_contratada || 0;
+      const preco = produto.preco || produto.preco_unitario || 0;
+      const valorProduto = limite * preco;
       return total + valorProduto;
     }, 0);
   }
@@ -122,10 +124,13 @@ export default function ContratoDetalhe() {
 
       // Carregar produtos do contrato
       const produtosContratoData = await listarContratoProdutos(Number(id));
-      // Calcular valor_total para cada produto se não estiver presente
+      // Mapear campos da API para o formato esperado pelo frontend
       const produtosComValorTotal = produtosContratoData.map((produto: any) => ({
         ...produto,
-        valor_total: produto.valor_total || (produto.limite * produto.preco)
+        limite: produto.quantidade_contratada || produto.limite || 0,
+        preco: produto.preco_unitario || produto.preco || 0,
+        saldo: produto.saldo || produto.quantidade_contratada || produto.limite || 0,
+        valor_total: produto.valor_total || ((produto.quantidade_contratada || produto.limite || 0) * (produto.preco_unitario || produto.preco || 0))
       }));
       setProdutosContrato(produtosComValorTotal);
 
@@ -181,15 +186,17 @@ export default function ContratoDetalhe() {
 
       if (editandoProduto) {
         await editarContratoProduto(editandoProduto.id, {
-          ...formProduto,
           contrato_id: editandoProduto.contrato_id,
-          saldo: formProduto.limite, // Saldo sempre igual ao limite
+          produto_id: formProduto.produto_id,
+          quantidade_contratada: formProduto.limite,
+          preco_unitario: formProduto.preco,
         });
       } else {
         await adicionarContratoProduto({
-          ...formProduto,
           contrato_id: Number(id),
-          saldo: formProduto.limite, // Saldo sempre igual ao limite
+          produto_id: formProduto.produto_id,
+          quantidade_contratada: formProduto.limite,
+          preco_unitario: formProduto.preco,
         });
       }
       fecharModalProduto();

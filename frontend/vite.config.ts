@@ -52,6 +52,12 @@ export default defineConfig(({ command, mode }) => {
               console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
             });
           }
+        },
+        '/health': {
+          target: apiConfig.apiUrl,
+          changeOrigin: true,
+          secure: apiConfig.secure,
+          rewrite: (path) => path.replace(/^\/health/, '/health')
         }
       }
     },
