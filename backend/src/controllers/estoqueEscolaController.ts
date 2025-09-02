@@ -13,11 +13,7 @@ export async function listarEstoqueEscola(req: Request, res: Response) {
         $1::integer as escola_id,
         p.id as produto_id,
         COALESCE(ee.quantidade_atual, 0) as quantidade_atual,
-        COALESCE(ee.quantidade_minima, 0) as quantidade_minima,
-        COALESCE(ee.quantidade_maxima, 0) as quantidade_maxima,
-        COALESCE(ee.data_ultima_atualizacao, CURRENT_TIMESTAMP) as data_ultima_atualizacao,
-        ee.observacoes,
-        COALESCE(ee.ativo, true) as ativo,
+        COALESCE(ee.updated_at, CURRENT_TIMESTAMP) as data_ultima_atualizacao,
         p.nome as produto_nome,
         p.descricao as produto_descricao,
         p.unidade as unidade_medida,
@@ -25,8 +21,6 @@ export async function listarEstoqueEscola(req: Request, res: Response) {
         e.nome as escola_nome,
         CASE 
           WHEN COALESCE(ee.quantidade_atual, 0) = 0 THEN 'sem_estoque'
-          WHEN COALESCE(ee.quantidade_minima, 0) > 0 AND COALESCE(ee.quantidade_atual, 0) <= COALESCE(ee.quantidade_minima, 0) THEN 'baixo'
-          WHEN COALESCE(ee.quantidade_maxima, 0) > 0 AND COALESCE(ee.quantidade_atual, 0) >= COALESCE(ee.quantidade_maxima, 0) THEN 'alto'
           ELSE 'normal'
         END as status_estoque
       FROM produtos p
@@ -99,9 +93,6 @@ export async function atualizarQuantidadeEstoque(req: Request, res: Response) {
     const { id } = req.params;
     const {
       quantidade_atual,
-      quantidade_minima,
-      quantidade_maxima,
-      observacoes,
       usuario_id
     } = req.body;
 
@@ -116,20 +107,11 @@ export async function atualizarQuantidadeEstoque(req: Request, res: Response) {
     const result = await db.query(`
       UPDATE estoque_escolas SET
         quantidade_atual = $1,
-        quantidade_minima = $2,
-        quantidade_maxima = $3,
-        observacoes = $4,
-        usuario_ultima_atualizacao = $5,
-        data_ultima_atualizacao = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $6
+      WHERE id = $2
       RETURNING *
     `, [
       quantidade_atual,
-      quantidade_minima || 0,
-      quantidade_maxima || 0,
-      observacoes,
-      usuario_id,
       id
     ]);
 
@@ -172,7 +154,7 @@ export async function atualizarLoteQuantidades(req: Request, res: Response) {
       const resultados = [];
 
       for (const item of itens) {
-        const { produto_id, quantidade_atual, observacoes } = item;
+        const { produto_id, quantidade_atual } = item;
 
         // Validar quantidade
         if (quantidade_atual < 0) {
@@ -181,17 +163,14 @@ export async function atualizarLoteQuantidades(req: Request, res: Response) {
 
         // Primeiro tentar atualizar, se não existir, criar o registro
         const updateResult = await client.query(`
-          INSERT INTO estoque_escolas (escola_id, produto_id, quantidade_atual, observacoes, usuario_ultima_atualizacao, ativo)
-          VALUES ($4, $5, $1, $2, $3, true)
+          INSERT INTO estoque_escolas (escola_id, produto_id, quantidade_atual)
+          VALUES ($2, $3, $1)
           ON CONFLICT (escola_id, produto_id) 
           DO UPDATE SET
             quantidade_atual = $1,
-            observacoes = $2,
-            usuario_ultima_atualizacao = $3,
-            data_ultima_atualizacao = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
           RETURNING *
-        `, [quantidade_atual, observacoes, usuario_id, escola_id, produto_id]);
+        `, [quantidade_atual, escola_id, produto_id]);
 
         if (updateResult.rows.length > 0) {
           resultados.push(updateResult.rows[0]);
@@ -267,9 +246,8 @@ export async function obterResumoEstoque(req: Request, res: Response) {
       SELECT 
         COUNT(*) as total_produtos,
         COUNT(CASE WHEN COALESCE(ee.quantidade_atual, 0) > 0 THEN 1 END) as produtos_com_estoque,
-        COUNT(CASE WHEN COALESCE(ee.quantidade_minima, 0) > 0 AND COALESCE(ee.quantidade_atual, 0) <= COALESCE(ee.quantidade_minima, 0) THEN 1 END) as produtos_baixo_estoque,
-        COUNT(CASE WHEN COALESCE(ee.quantidade_maxima, 0) > 0 AND COALESCE(ee.quantidade_atual, 0) >= COALESCE(ee.quantidade_maxima, 0) THEN 1 END) as produtos_alto_estoque,
-        MAX(COALESCE(ee.data_ultima_atualizacao, CURRENT_TIMESTAMP)) as ultima_atualizacao
+        COUNT(CASE WHEN COALESCE(ee.quantidade_atual, 0) = 0 THEN 1 END) as produtos_sem_estoque,
+        MAX(COALESCE(ee.updated_at, CURRENT_TIMESTAMP)) as ultima_atualizacao
       FROM produtos p
       CROSS JOIN escolas e
       LEFT JOIN estoque_escolas ee ON (ee.produto_id = p.id AND ee.escola_id = e.id)
@@ -285,8 +263,7 @@ export async function obterResumoEstoque(req: Request, res: Response) {
       data: {
         total_produtos: parseInt(resumo.total_produtos),
         produtos_com_estoque: parseInt(resumo.produtos_com_estoque),
-        produtos_baixo_estoque: parseInt(resumo.produtos_baixo_estoque),
-        produtos_alto_estoque: parseInt(resumo.produtos_alto_estoque),
+        produtos_sem_estoque: parseInt(resumo.produtos_sem_estoque),
         ultima_atualizacao: resumo.ultima_atualizacao
       }
     });
@@ -315,8 +292,8 @@ export async function inicializarEstoqueEscola(req: Request, res: Response) {
 
     // Inserir produtos que ainda não existem no estoque da escola
     const result = await db.query(`
-      INSERT INTO estoque_escolas (escola_id, produto_id, quantidade_atual, ativo)
-      SELECT $1, p.id, 0.000, true
+      INSERT INTO estoque_escolas (escola_id, produto_id, quantidade_atual)
+      SELECT $1, p.id, 0.000
       FROM produtos p
       WHERE p.id NOT IN (
         SELECT produto_id 
@@ -380,8 +357,8 @@ export async function registrarMovimentacao(req: Request, res: Response) {
       if (estoqueAtual.rows.length === 0) {
         // Criar registro no estoque se não existir
         const novoItem = await client.query(`
-          INSERT INTO estoque_escolas (escola_id, produto_id, quantidade_atual, ativo)
-          VALUES ($1, $2, 0, true)
+          INSERT INTO estoque_escolas (escola_id, produto_id, quantidade_atual)
+          VALUES ($1, $2, 0)
           RETURNING *
         `, [escola_id, produto_id]);
         item = novoItem.rows[0];
@@ -412,12 +389,10 @@ export async function registrarMovimentacao(req: Request, res: Response) {
       const updateResult = await client.query(`
         UPDATE estoque_escolas SET
           quantidade_atual = $1,
-          usuario_ultima_atualizacao = $2,
-          data_ultima_atualizacao = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
-        WHERE escola_id = $3 AND produto_id = $4
+        WHERE escola_id = $2 AND produto_id = $3
         RETURNING *
-      `, [quantidadePosterior, usuario_id, escola_id, produto_id]);
+      `, [quantidadePosterior, escola_id, produto_id]);
 
       // Registrar no histórico
       const historicoResult = await client.query(`

@@ -629,11 +629,11 @@ const EstoqueEscolaPage = () => {
                             <Card>
                                 <CardContent>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        <Warning sx={{ fontSize: 40, color: '#f59e0b' }} />
+                                        <Warning sx={{ fontSize: 40, color: '#ef4444' }} />
                                         <Box>
-                                            <Typography variant="h6">{resumo.produtos_baixo_estoque}</Typography>
+                                            <Typography variant="h6">{resumo.produtos_sem_estoque}</Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                Estoque Baixo
+                                                Sem Estoque
                                             </Typography>
                                         </Box>
                                     </Box>

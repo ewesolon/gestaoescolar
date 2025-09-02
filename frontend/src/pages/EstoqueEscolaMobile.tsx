@@ -624,11 +624,11 @@ const EstoqueEscolaMobile = () => {
                                     transition: 'all 0.2s ease-in-out'
                                 }}
                             >
-                                <Typography variant="h5" sx={{ fontWeight: 800, color: 'warning.main', mb: 0.5, fontSize: '1.5rem' }}>
-                                    {resumo.produtos_baixo_estoque}
+                                <Typography variant="h5" sx={{ fontWeight: 800, color: 'error.main', mb: 0.5, fontSize: '1.5rem' }}>
+                                    {resumo.produtos_sem_estoque}
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, fontSize: '0.7rem' }}>
-                                    Baixo
+                                    Sem Estoque
                                 </Typography>
                             </Card>
                         </Grid>

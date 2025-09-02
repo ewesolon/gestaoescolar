@@ -32,11 +32,9 @@ export async function buscarEstoqueConsolidadoProduto(req: Request, res: Respons
         $2 as unidade,
         CASE 
           WHEN COALESCE(ee.quantidade_atual, 0) = 0 THEN 'sem_estoque'
-          WHEN COALESCE(ee.quantidade_minima, 0) > 0 AND COALESCE(ee.quantidade_atual, 0) <= COALESCE(ee.quantidade_minima, 0) THEN 'baixo'
-          WHEN COALESCE(ee.quantidade_maxima, 0) > 0 AND COALESCE(ee.quantidade_atual, 0) >= COALESCE(ee.quantidade_maxima, 0) THEN 'alto'
           ELSE 'normal'
         END as status_estoque,
-        COALESCE(ee.data_ultima_atualizacao, CURRENT_TIMESTAMP) as data_ultima_atualizacao
+        COALESCE(ee.updated_at, CURRENT_TIMESTAMP) as data_ultima_atualizacao
       FROM escolas e
       LEFT JOIN estoque_escolas ee ON (ee.escola_id = e.id AND ee.produto_id = $1)
       WHERE e.ativo = true

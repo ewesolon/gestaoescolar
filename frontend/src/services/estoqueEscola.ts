@@ -40,8 +40,7 @@ export interface HistoricoEstoque {
 export interface ResumoEstoque {
   total_produtos: number;
   produtos_com_estoque: number;
-  produtos_baixo_estoque: number;
-  produtos_alto_estoque: number;
+  produtos_sem_estoque: number;
   quantidade_total: number;
   ultima_atualizacao?: string;
 }
