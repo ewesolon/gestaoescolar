@@ -657,10 +657,6 @@ export default function ContratoDetalhe() {
             sx={{ mb: 2 }}
             required
           />
-
-            sx={{ mb: 2 }}
-            required
-          />
           <TextField
             label="Data Início"
             type="date"

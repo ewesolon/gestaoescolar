@@ -1,38 +1,26 @@
 // Configuração PostgreSQL - Sistema de Alimentação Escolar
 const { Pool } = require('pg');
 
-// Carregar configuração
-let config;
-try {
-  const configModule = require('./config');
-  config = configModule.config || configModule.default;
-} catch (error) {
-  console.warn('⚠️  Não foi possível carregar config, usando variáveis de ambiente');
-  config = {
-    database: {
-      user: process.env.DB_USER || 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      name: process.env.DB_NAME || 'alimentacao_escolar',
-      password: process.env.DB_PASSWORD || 'admin123',
-      port: process.env.DB_PORT || 5432,
-      ssl: process.env.DB_SSL === 'true'
-    }
-  };
-}
+// Configuração do pool de conexões
+const poolConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT) || 5432,
+  database: process.env.DB_NAME || 'alimentacao_escolar',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'admin123',
+  ssl: process.env.DB_SSL === 'true' ? {
+    rejectUnauthorized: false,
+    require: true
+  } : false,
+  max: 10,
+  min: 0,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 30000,
+  acquireTimeoutMillis: 30000
+};
 
 // Pool de conexões PostgreSQL (Supabase)
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  
-  // Configurações otimizadas para Supabase
-  max: 15, // Supabase suporta até 60 conexões no plano gratuito
-  min: 0,  // Não manter conexões ociosas
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-  acquireTimeoutMillis: 10000,
-  allowExitOnIdle: true, // Para Vercel Serverless
-});
+const pool = new Pool(poolConfig);
 
 // Função principal para queries
 async function query(text, params = []) {

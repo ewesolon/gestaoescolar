@@ -98,20 +98,8 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Middleware adicional para garantir CORS em desenvolvimento
-if (process.env.NODE_ENV === 'development') {
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-
-    if (req.method === 'OPTIONS') {
-      res.sendStatus(200);
-    } else {
-      next();
-    }
-  });
-}
+// CORS já está configurado corretamente acima com as origens específicas
+// Removido middleware que forçava '*' e conflitava com credentials: true
 
 
 
@@ -158,6 +146,8 @@ app.get("/api/test-db", async (req, res) => {
     });
   }
 });
+
+
 
 // Endpoint de teste para tabelas de pedidos
 app.get("/api/test-pedidos", async (req, res) => {
