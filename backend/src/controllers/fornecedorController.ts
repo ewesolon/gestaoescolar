@@ -158,9 +158,91 @@ export async function editarFornecedor(req: Request, res: Response) {
   }
 }
 
+export async function verificarRelacionamentosFornecedor(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    // Verificar se o fornecedor existe
+    const fornecedorResult = await db.query(`
+      SELECT nome FROM fornecedores WHERE id = $1
+    `, [id]);
+
+    if (fornecedorResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Fornecedor não encontrado"
+      });
+    }
+
+    const fornecedorNome = fornecedorResult.rows[0].nome;
+
+    // Buscar contratos relacionados
+    const contratosResult = await db.query(`
+      SELECT 
+        c.id,
+        c.numero,
+        c.data_inicio,
+        c.data_fim,
+        c.valor_total,
+        c.status,
+        COUNT(cp.id) as total_produtos
+      FROM contratos c
+      LEFT JOIN contrato_produtos cp ON c.id = cp.contrato_id
+      WHERE c.fornecedor_id = $1
+      GROUP BY c.id, c.numero, c.data_inicio, c.data_fim, c.valor_total, c.status
+      ORDER BY c.data_inicio DESC
+    `, [id]);
+
+    const contratos = contratosResult.rows;
+    const totalContratos = contratos.length;
+    const contratosAtivos = contratos.filter(c => c.status === 'ativo' || c.status === 'ATIVO').length;
+    const podeExcluir = contratosAtivos === 0;
+
+    res.json({
+      success: true,
+      data: {
+        fornecedor: fornecedorNome,
+        totalContratos,
+        contratosAtivos,
+        podeExcluir,
+        contratos: contratos.map(c => ({
+          id: c.id,
+          numero: c.numero,
+          dataInicio: c.data_inicio,
+          dataFim: c.data_fim,
+          valorTotal: parseFloat(c.valor_total || 0),
+          status: c.status?.toLowerCase() || 'indefinido',
+          totalProdutos: parseInt(c.total_produtos || 0)
+        }))
+      }
+    });
+  } catch (error) {
+    console.error("❌ Erro ao verificar relacionamentos do fornecedor:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro ao verificar relacionamentos do fornecedor",
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  }
+}
+
 export async function removerFornecedor(req: Request, res: Response) {
   try {
     const { id } = req.params;
+
+    // Verificar se há contratos ativos antes de excluir
+    const contratosAtivos = await db.query(`
+      SELECT COUNT(*) as total 
+      FROM contratos 
+      WHERE fornecedor_id = $1 AND (status = 'ativo' OR status = 'ATIVO')
+    `, [id]);
+
+    if (parseInt(contratosAtivos.rows[0].total) > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Não é possível excluir fornecedor com contratos ativos"
+      });
+    }
 
     const result = await db.query(`
       DELETE FROM fornecedores WHERE id = $1

@@ -30,7 +30,6 @@ interface Contrato {
   id: number;
   fornecedor_id: number;
   numero: string;
-  contratante: string;
   data_inicio: string;
   data_fim: string;
   ativo: boolean;
@@ -159,7 +158,6 @@ const Contratos: React.FC = () => {
   const contratosFiltrados = contratos.filter((contrato) => {
     const matchBusca = !filtros.busca || 
       contrato.numero.toLowerCase().includes(filtros.busca.toLowerCase()) ||
-      contrato.contratante.toLowerCase().includes(filtros.busca.toLowerCase()) ||
       fornecedorMap.get(contrato.fornecedor_id)?.toLowerCase().includes(filtros.busca.toLowerCase());
     
     const matchFornecedor = !filtros.fornecedor_id || 
@@ -292,7 +290,6 @@ const Contratos: React.FC = () => {
             <TableRow>
               <TableCell>Número</TableCell>
               <TableCell>Fornecedor</TableCell>
-              <TableCell>Contratante</TableCell>
               <TableCell>Data Início</TableCell>
               <TableCell>Data Fim</TableCell>
               <TableCell align="right">Valor Total</TableCell>
@@ -307,7 +304,6 @@ const Contratos: React.FC = () => {
                 <TableCell>
                   {fornecedorMap.get(contrato.fornecedor_id) || "N/A"}
                 </TableCell>
-                <TableCell>{contrato.contratante}</TableCell>
                 <TableCell>
                   {new Date(contrato.data_inicio).toLocaleDateString()}
                 </TableCell>

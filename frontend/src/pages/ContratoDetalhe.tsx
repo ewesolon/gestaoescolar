@@ -63,7 +63,6 @@ const produtoVazio = {
 const contratoVazio = {
   fornecedor_id: "",
   numero: "",
-  contratante: "",
   data_inicio: "",
   data_fim: "",
   ativo: true,
@@ -242,7 +241,6 @@ export default function ContratoDetalhe() {
     try {
       if (
         !formContrato.numero ||
-        !formContrato.contratante ||
         !formContrato.data_inicio ||
         !formContrato.data_fim
       ) {
@@ -425,9 +423,7 @@ export default function ContratoDetalhe() {
               <Typography variant="body1" sx={{ mb: 1 }}>
                 <strong>Número:</strong> {contrato.numero}
               </Typography>
-              <Typography variant="body1" sx={{ mb: 1 }}>
-                <strong>Contratante:</strong> {contrato.contratante}
-              </Typography>
+
             </Grid>
             <Grid item xs={12} md={6}>
               <Typography
@@ -661,13 +657,7 @@ export default function ContratoDetalhe() {
             sx={{ mb: 2 }}
             required
           />
-          <TextField
-            label="Contratante"
-            value={formContrato.contratante}
-            onChange={(e) =>
-              setFormContrato({ ...formContrato, contratante: e.target.value })
-            }
-            fullWidth
+
             sx={{ mb: 2 }}
             required
           />

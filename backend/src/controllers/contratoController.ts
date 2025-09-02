@@ -27,7 +27,7 @@ export async function listarContratos(req: Request, res: Response) {
     // Filtro de busca por número ou descrição
     if (busca) {
       paramCount++;
-      whereClause += ` AND (c.numero ILIKE $${paramCount} OR c.descricao ILIKE $${paramCount} OR f.nome ILIKE $${paramCount})`;
+      whereClause += ` AND (c.numero ILIKE $${paramCount} OR f.nome ILIKE $${paramCount})`;
       params.push(`%${busca}%`);
     }
     
@@ -53,10 +53,6 @@ export async function listarContratos(req: Request, res: Response) {
         COALESCE(SUM(cp.quantidade_contratada * cp.preco_unitario), c.valor_total, 0) as valor_total_contrato,
         c.status,
         c.ativo,
-        c.descricao,
-        c.objeto,
-        c.modalidade,
-        c.numero_processo,
         c.created_at,
         COUNT(cp.id) as total_produtos,
         COUNT(a.id) as total_aditivos,
@@ -68,7 +64,7 @@ export async function listarContratos(req: Request, res: Response) {
       LEFT JOIN contrato_produtos cp ON c.id = cp.contrato_id
       LEFT JOIN aditivos_contratos a ON c.id = a.contrato_id
       WHERE ${whereClause}
-      GROUP BY c.id, c.numero, c.fornecedor_id, f.nome, f.cnpj, c.data_inicio, c.data_fim, c.valor_total, c.status, c.ativo, c.descricao, c.objeto, c.modalidade, c.numero_processo, c.created_at
+      GROUP BY c.id, c.numero, c.fornecedor_id, f.nome, f.cnpj, c.data_inicio, c.data_fim, c.valor_total, c.status, c.ativo, c.created_at
       ORDER BY c.created_at DESC
       LIMIT $${limitParam} OFFSET $${offsetParam}
     `, params);
@@ -178,10 +174,6 @@ export async function criarContrato(req: Request, res: Response) {
       data_inicio,
       data_fim,
       valor_total,
-      descricao,
-      objeto,
-      modalidade,
-      numero_processo,
       status = 'ativo',
       ativo = true
     } = req.body;
@@ -243,11 +235,11 @@ export async function criarContrato(req: Request, res: Response) {
     const result = await db.query(`
       INSERT INTO contratos (
         numero, fornecedor_id, data_inicio, data_fim, valor_total, 
-        descricao, objeto, modalidade, numero_processo, status, ativo, created_at
+        status, ativo, created_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
       RETURNING *
-    `, [numero, fornecedor_id, data_inicio, data_fim, valor_total || 0, descricao, objeto, modalidade, numero_processo, status, ativo]);
+    `, [numero, fornecedor_id, data_inicio, data_fim, valor_total || 0, status, ativo]);
 
     // Buscar dados completos do contrato criado
     const contratoCompletoResult = await db.query(`
@@ -333,13 +325,12 @@ export async function removerContrato(req: Request, res: Response) {
       SELECT 
         (SELECT COUNT(*) FROM contrato_produtos WHERE contrato_id = $1) as produtos,
         (SELECT COUNT(*) FROM aditivos_contratos WHERE contrato_id = $1) as aditivos,
-        (SELECT COUNT(*) FROM pedidos_itens WHERE contrato_id = $1) as pedidos_itens,
-        (SELECT COUNT(*) FROM movimentacoes_consumo_contratos WHERE contrato_id = $1) as movimentacoes
+        (SELECT COUNT(*) FROM pedidos_itens WHERE contrato_id = $1) as pedidos_itens
     `, [id]);
 
     const dependencias = dependenciasResult.rows[0];
     const totalDependencias = Number(dependencias.produtos) + Number(dependencias.aditivos) + 
-                             Number(dependencias.pedidos_itens) + Number(dependencias.movimentacoes);
+                             Number(dependencias.pedidos_itens);
 
     if (totalDependencias > 0 && force !== 'true') {
       const mensagens = [];
@@ -352,9 +343,6 @@ export async function removerContrato(req: Request, res: Response) {
       if (Number(dependencias.pedidos_itens) > 0) {
         mensagens.push(`${dependencias.pedidos_itens} itens de pedidos`);
       }
-      if (Number(dependencias.movimentacoes) > 0) {
-        mensagens.push(`${dependencias.movimentacoes} movimentações`);
-      }
 
       return res.status(409).json({
         success: false,
@@ -363,8 +351,7 @@ export async function removerContrato(req: Request, res: Response) {
         dependencias: {
           produtos: Number(dependencias.produtos),
           aditivos: Number(dependencias.aditivos),
-          pedidos_itens: Number(dependencias.pedidos_itens),
-          movimentacoes: Number(dependencias.movimentacoes)
+          pedidos_itens: Number(dependencias.pedidos_itens)
         }
       });
     }
@@ -374,7 +361,6 @@ export async function removerContrato(req: Request, res: Response) {
       console.log(`🔄 Removendo dependências do contrato ${id} em cascata...`);
       
       // Remover em ordem de dependência
-      await db.query(`DELETE FROM movimentacoes_consumo_contratos WHERE contrato_id = $1`, [id]);
       await db.query(`DELETE FROM pedidos_itens WHERE contrato_id = $1`, [id]);
       await db.query(`DELETE FROM aditivos_contratos WHERE contrato_id = $1`, [id]);
       await db.query(`DELETE FROM contrato_produtos WHERE contrato_id = $1`, [id]);

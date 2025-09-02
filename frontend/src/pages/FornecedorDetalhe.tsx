@@ -47,7 +47,6 @@ interface Fornecedor {
 interface Contrato {
   id: number;
   numero: string;
-  contratante: string;
   data_inicio: string;
   data_fim: string;
   ativo: boolean;
@@ -360,7 +359,6 @@ export default function FornecedorDetalhe() {
                 <TableHead>
                   <TableRow>
                     <TableCell>Número</TableCell>
-                    <TableCell>Contratante</TableCell>
                     <TableCell>Período</TableCell>
                     <TableCell>Valor Total</TableCell>
                     <TableCell>Status</TableCell>
@@ -378,7 +376,6 @@ export default function FornecedorDetalhe() {
                             {contrato.numero}
                           </Typography>
                         </TableCell>
-                        <TableCell>{contrato.contratante}</TableCell>
                         <TableCell>
                           <Typography variant="body2">
                             {formatarData(contrato.data_inicio)}

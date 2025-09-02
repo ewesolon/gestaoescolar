@@ -40,7 +40,6 @@ export default function NovoContrato() {
   const [formData, setFormData] = useState({
     fornecedor_id: "",
     numero: "",
-    contratante: "",
     data_inicio: "",
     data_fim: "",
   });
@@ -110,10 +109,7 @@ export default function NovoContrato() {
         setError("Número do contrato é obrigatório");
         return;
       }
-      if (!formData.contratante.trim()) {
-        setError("Contratante é obrigatório");
-        return;
-      }
+
       if (!formData.data_inicio) {
         setError("Data de início é obrigatória");
         return;
@@ -227,13 +223,7 @@ export default function NovoContrato() {
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Contratante *"
-                value={formData.contratante}
-                onChange={(e) => handleInputChange("contratante", e.target.value)}
-                fullWidth
-                placeholder="Ex: Prefeitura Municipal"
+
               />
             </Grid>
 
