@@ -150,14 +150,7 @@ const menuItems = [
     path: "/escolas",
     category: "cadastros",
   },
-  {
-    text: "Mapa das Escolas",
-    icon: <LocationOn />,
-    path: "/escolas-mapa",
-    category: "cadastros",
-    badge: "Novo!",
-    badgeColor: "success",
-  },
+
   {
     text: "Modalidades",
     icon: <Category />,

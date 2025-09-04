@@ -21,7 +21,46 @@ import {
     Map,
     School,
 } from '@mui/icons-material';
-import { extractCoordinatesFromGoogleMapsUrl, validateCoordinates } from '../utils/mapUtils';
+// Funções utilitárias para coordenadas (movidas do mapUtils removido)
+function extractCoordinatesFromGoogleMapsUrl(url: string): { lat: number; lng: number } | null {
+  if (!url || typeof url !== 'string') return null;
+
+  try {
+    const cleanUrl = decodeURIComponent(url.trim());
+    
+    if (cleanUrl.includes('maps.app.goo.gl') || cleanUrl.includes('goo.gl/maps')) {
+      return null;
+    }
+    
+    // Formato @lat,lng,zoom
+    const atMatch = cleanUrl.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (atMatch) {
+      const lat = parseFloat(atMatch[1]);
+      const lng = parseFloat(atMatch[2]);
+      if (validateCoordinates(lat, lng)) {
+        return { lat, lng };
+      }
+    }
+
+    // Formato ll=lat,lng
+    const llMatch = cleanUrl.match(/ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (llMatch) {
+      const lat = parseFloat(llMatch[1]);
+      const lng = parseFloat(llMatch[2]);
+      if (validateCoordinates(lat, lng)) {
+        return { lat, lng };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function validateCoordinates(lat: number, lng: number): boolean {
+  return !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
 
 interface LocationSelectorProps {
     value?: string;

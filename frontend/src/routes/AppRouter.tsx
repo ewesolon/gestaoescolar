@@ -33,7 +33,7 @@ const PageLoader = () => (
 
 // Lazy loading para páginas menos críticas
 const Escolas = lazy(() => import("../pages/Escolas"));
-const MapaEscolas = lazy(() => import("../pages/MapaEscolas"));
+
 const Modalidades = lazy(() => import("../pages/Modalidades"));
 const Produtos = lazy(() => import("../pages/Produtos"));
 const ProdutoDetalhe = lazy(() => import("../pages/ProdutoDetalhe"));
@@ -177,10 +177,7 @@ export default function AppRouter({ routerConfig }: AppRouterProps) {
               path="/estoque-consolidado"
               element={<LazyRoute><EstoqueConsolidado /></LazyRoute>}
             />
-            <Route
-              path="/escolas-mapa"
-              element={<LazyRoute><MapaEscolas /></LazyRoute>}
-            />
+
             <Route
               path="/modalidades"
               element={<LazyRoute><Modalidades /></LazyRoute>}
