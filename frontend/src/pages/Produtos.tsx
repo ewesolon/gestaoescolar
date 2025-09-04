@@ -57,6 +57,8 @@ import {
   Upload,
   Download,
   FilterList,
+  ArrowUpward,
+  ArrowDownward,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
@@ -77,9 +79,23 @@ interface Produto {
   ativo: boolean;
 }
 
+interface ProdutoForm {
+  nome: string;
+  descricao: string;
+  unidade: string;
+  fator_divisao: string | number | null;
+  tipo_processamento: string;
+  categoria: string;
+  marca: string;
+  codigo_barras: string;
+  peso: string | number | null;
+  validade_minima: string | number | null;
+  imagem_url: string;
+  perecivel: boolean;
+  ativo: boolean;
+}
 
-
-const produtoVazio = {
+const produtoVazio: ProdutoForm = {
   nome: "",
   descricao: "",
   unidade: "",
@@ -113,6 +129,7 @@ export default function Produtos() {
   const [selectedTipoProcessamento, setSelectedTipoProcessamento] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -124,7 +141,7 @@ export default function Produtos() {
 
   // Estados do modal de criação
   const [openNovo, setOpenNovo] = useState(false);
-  const [formNovo, setFormNovo] = useState<any>(produtoVazio);
+  const [formNovo, setFormNovo] = useState<ProdutoForm>(produtoVazio);
   const [salvandoNovo, setSalvandoNovo] = useState(false);
 
   // Estados do modal de importação
@@ -143,7 +160,7 @@ export default function Produtos() {
       const data = await listarProdutos();
       // Ensure data is always an array
       setProdutos(Array.isArray(data) ? data : []);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro ao carregar produtos:', err);
       setError('Erro ao carregar produtos. Tente novamente.');
       setProdutos([]); // Set empty array on error
@@ -182,18 +199,24 @@ export default function Produtos() {
 
     return matchesSearch && matchesCategoria && matchesMarca && matchesTipoProcessamento && matchesStatus;
   }).sort((a, b) => {
+    let comparison = 0;
     switch (sortBy) {
       case 'name':
-        return a.nome.localeCompare(b.nome);
+        comparison = a.nome.localeCompare(b.nome);
+        break;
       case 'categoria':
-        return (a.categoria || '').localeCompare(b.categoria || '');
+        comparison = (a.categoria || '').localeCompare(b.categoria || '');
+        break;
       case 'marca':
-        return (a.marca || '').localeCompare(b.marca || '');
+        comparison = (a.marca || '').localeCompare(b.marca || '');
+        break;
       case 'status':
-        return Number(b.ativo) - Number(a.ativo);
+        comparison = Number(b.ativo) - Number(a.ativo);
+        break;
       default:
-        return a.nome.localeCompare(b.nome);
+        comparison = a.nome.localeCompare(b.nome);
     }
+    return sortOrder === 'desc' ? -comparison : comparison;
   });
 
   // Produtos paginados
@@ -205,7 +228,7 @@ export default function Produtos() {
   }, [searchTerm, selectedCategoria, selectedMarcas, selectedTipoProcessamento, selectedStatus]);
 
   // Funções de paginação
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
     setPage(newPage);
   };
 
@@ -259,7 +282,7 @@ export default function Produtos() {
       setSuccessMessage('Produto criado com sucesso!');
       setTimeout(() => setSuccessMessage(null), 3000);
       navigate(`/produtos/${novo.id}`);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro ao criar produto:', err);
       setError("Erro ao criar produto");
     } finally {
@@ -267,13 +290,44 @@ export default function Produtos() {
     }
   }
 
+  interface ResultadoImportacao {
+    resultados: {
+      insercoes?: number;
+      atualizacoes?: number;
+      sucesso?: number;
+      erros?: number;
+    };
+  }
+
   // Função para importação em lote
-  const handleImportProdutos = async (produtosImportacao: any[]) => {
+  interface ProdutoImportacao {
+    nome: string;
+    [key: string]: any;
+  }
+
+  const handleImportProdutos = async (produtosImportacao: ProdutoImportacao[]) => {
     try {
       setLoading(true);
 
+      // Mapear ProdutoImportacao para ImportarProdutoRequest
+      const produtosParaImportar = produtosImportacao.map(produto => ({
+        nome: produto.nome,
+        unidade: produto.unidade || produto.unidade_medida || 'un', // Usar unidade ou unidade_medida, padrão 'un'
+        categoria: produto.categoria,
+        descricao: produto.descricao
+      }));
+      
       // Usar o endpoint otimizado de importação em lote
-      const resultado = await importarProdutosLote(produtosImportacao);
+      const response = await importarProdutosLote(produtosParaImportar);
+      // Adaptar a resposta para o formato esperado pela interface ResultadoImportacao
+      const resultado: ResultadoImportacao = { 
+        resultados: {
+          insercoes: (response as any).insercoes || 0,
+          atualizacoes: (response as any).atualizacoes || 0,
+          sucesso: ((response as any).insercoes || 0) + ((response as any).atualizacoes || 0),
+          erros: response.erros || 0
+        } 
+      };
 
       const { insercoes = 0, atualizacoes = 0 } = resultado.resultados;
       let mensagemSucesso = '';
@@ -301,7 +355,7 @@ export default function Produtos() {
         setSuccessMessage(null);
         setError(null);
       }, 5000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro na importação em lote:', err);
       setError('Erro ao importar produtos. Tente novamente.');
     } finally {
@@ -373,7 +427,7 @@ export default function Produtos() {
 
       setSuccessMessage(`${produtos.length} produtos exportados com sucesso!`);
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro na exportação:', error);
       setError('Erro ao exportar produtos. Tente novamente.');
       setTimeout(() => setError(null), 3000);
@@ -443,6 +497,26 @@ export default function Produtos() {
               }}
             />
 
+            {/* Botão de Filtros */}
+            <Button
+              startIcon={<FilterList />}
+              onClick={() => setShowFilters(!showFilters)}
+              sx={{
+                color: hasActiveFilters ? '#059669' : '#6b7280',
+                bgcolor: hasActiveFilters ? '#f0fdf4' : 'transparent',
+                border: hasActiveFilters ? '1px solid #059669' : '1px solid #d1d5db',
+                borderRadius: '8px',
+                textTransform: 'none',
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                '&:hover': {
+                  bgcolor: hasActiveFilters ? '#dcfce7' : '#f9fafb',
+                  borderColor: hasActiveFilters ? '#059669' : '#9ca3af',
+                },
+              }}
+            >
+              Filtros
+            </Button>
+
             {/* Botões */}
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
@@ -473,39 +547,21 @@ export default function Produtos() {
               >
                 <MoreVert />
               </IconButton>
+            </Box>
 
+            {hasActiveFilters && (
               <Button
-                startIcon={<FilterList />}
-                onClick={() => setShowFilters(!showFilters)}
+                startIcon={<Clear />}
+                onClick={clearFilters}
                 sx={{
-                  color: hasActiveFilters ? '#059669' : '#6b7280',
-                  bgcolor: hasActiveFilters ? '#f0fdf4' : 'transparent',
-                  border: hasActiveFilters ? '1px solid #059669' : '1px solid #d1d5db',
-                  borderRadius: '8px',
+                  color: '#ef4444',
                   textTransform: 'none',
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                  '&:hover': {
-                    bgcolor: hasActiveFilters ? '#dcfce7' : '#f9fafb',
-                  },
                 }}
               >
-                Filtros {hasActiveFilters && `(${[searchTerm, selectedCategoria, ...selectedMarcas, selectedTipoProcessamento, selectedStatus].filter(Boolean).length})`}
+                Limpar Filtros
               </Button>
-
-              {hasActiveFilters && (
-                <Button
-                  startIcon={<Clear />}
-                  onClick={clearFilters}
-                  sx={{
-                    color: '#ef4444',
-                    textTransform: 'none',
-                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                  }}
-                >
-                  Limpar Filtros
-                </Button>
-              )}
-            </Box>
+            )}
           </Box>
 
           {/* Filtros Avançados */}
@@ -521,7 +577,7 @@ export default function Produtos() {
                   <InputLabel>Categoria</InputLabel>
                   <Select
                     value={selectedCategoria}
-                    onChange={(e) => setSelectedCategoria(e.target.value)}
+                    onChange={(e) => setSelectedCategoria(e.target.value as string)}
                     label="Categoria"
                   >
                     <MenuItem value="">Todas as categorias</MenuItem>
@@ -537,7 +593,10 @@ export default function Produtos() {
                   <Select
                     multiple
                     value={selectedMarcas}
-                    onChange={(e) => setSelectedMarcas(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedMarcas(typeof value === 'string' ? value.split(',') : value as string[]);
+                    }}
                     input={<OutlinedInput label="Marca" />}
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -561,7 +620,7 @@ export default function Produtos() {
                   <InputLabel>Tipo de Processamento</InputLabel>
                   <Select
                     value={selectedTipoProcessamento}
-                    onChange={(e) => setSelectedTipoProcessamento(e.target.value)}
+                    onChange={(e) => setSelectedTipoProcessamento(e.target.value as string)}
                     label="Tipo de Processamento"
                   >
                     <MenuItem value="">Todos os tipos</MenuItem>
@@ -576,7 +635,7 @@ export default function Produtos() {
                   <InputLabel>Status</InputLabel>
                   <Select
                     value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    onChange={(e) => setSelectedStatus(e.target.value as string)}
                     label="Status"
                   >
                     <MenuItem value="">Todos</MenuItem>
@@ -590,7 +649,7 @@ export default function Produtos() {
                   <InputLabel>Ordenar por</InputLabel>
                   <Select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    onChange={(e) => setSortBy(e.target.value as string)}
                     label="Ordenar por"
                   >
                     <MenuItem value="name">Nome</MenuItem>
@@ -599,6 +658,20 @@ export default function Produtos() {
                     <MenuItem value="status">Status</MenuItem>
                   </Select>
                 </FormControl>
+
+                {/* Direção da Ordenação */}
+                <Tooltip title={`Ordenação ${sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}`}>
+                  <IconButton
+                    onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    sx={{
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      color: sortOrder === 'asc' ? '#059669' : '#dc2626',
+                    }}
+                  >
+                    {sortOrder === 'asc' ? <ArrowUpward /> : <ArrowDownward />}
+                  </IconButton>
+                </Tooltip>
               </Box>
             </Box>
           )}
@@ -806,8 +879,6 @@ export default function Produtos() {
         )}
       </Box>
 
-
-
       {/* Modal de cadastro de novo produto */}
       <Dialog
         open={openNovo}
@@ -835,7 +906,7 @@ export default function Produtos() {
             <TextField
               label="Nome do Produto"
               value={formNovo.nome}
-              onChange={(e) => setFormNovo({ ...formNovo, nome: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, nome: e.target.value })}
               fullWidth
               required
               sx={{
@@ -847,7 +918,7 @@ export default function Produtos() {
             <TextField
               label="Categoria"
               value={formNovo.categoria}
-              onChange={(e) => setFormNovo({ ...formNovo, categoria: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, categoria: e.target.value })}
               fullWidth
               placeholder="cereais, carnes, laticínios, etc."
               sx={{
@@ -859,7 +930,7 @@ export default function Produtos() {
             <TextField
               label="Marca"
               value={formNovo.marca}
-              onChange={(e) => setFormNovo({ ...formNovo, marca: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, marca: e.target.value })}
               fullWidth
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -870,7 +941,7 @@ export default function Produtos() {
             <TextField
               label="Código de Barras"
               value={formNovo.codigo_barras}
-              onChange={(e) => setFormNovo({ ...formNovo, codigo_barras: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, codigo_barras: e.target.value })}
               fullWidth
               placeholder="EAN/UPC"
               sx={{
@@ -882,7 +953,7 @@ export default function Produtos() {
             <TextField
               label="Unidade"
               value={formNovo.unidade}
-              onChange={(e) => setFormNovo({ ...formNovo, unidade: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, unidade: e.target.value })}
               fullWidth
               placeholder="kg, g, L, ml, unidade"
               sx={{
@@ -894,7 +965,7 @@ export default function Produtos() {
             <TextField
               label="Peso (gramas)"
               value={formNovo.peso}
-              onChange={(e) => setFormNovo({ ...formNovo, peso: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, peso: e.target.value })}
               fullWidth
               type="number"
               placeholder="Peso em gramas"
@@ -907,7 +978,7 @@ export default function Produtos() {
             <TextField
               label="Validade Mínima (dias)"
               value={formNovo.validade_minima}
-              onChange={(e) => setFormNovo({ ...formNovo, validade_minima: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, validade_minima: e.target.value })}
               fullWidth
               type="number"
               placeholder="Dias de validade mínima"
@@ -920,7 +991,7 @@ export default function Produtos() {
             <TextField
               label="Fator de Divisão"
               value={formNovo.fator_divisao}
-              onChange={(e) => setFormNovo({ ...formNovo, fator_divisao: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, fator_divisao: e.target.value })}
               fullWidth
               type="number"
               sx={{
@@ -935,7 +1006,7 @@ export default function Produtos() {
             <TextField
               label="Descrição"
               value={formNovo.descricao}
-              onChange={(e) => setFormNovo({ ...formNovo, descricao: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, descricao: e.target.value })}
               fullWidth
               multiline
               rows={2}
@@ -951,7 +1022,7 @@ export default function Produtos() {
             <TextField
               label="Tipo de Processamento"
               value={formNovo.tipo_processamento}
-              onChange={(e) => setFormNovo({ ...formNovo, tipo_processamento: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, tipo_processamento: e.target.value })}
               fullWidth
               placeholder="in natura, minimamente processado, processado, ultraprocessado"
               sx={{
@@ -966,7 +1037,7 @@ export default function Produtos() {
             <TextField
               label="URL da Imagem"
               value={formNovo.imagem_url}
-              onChange={(e) => setFormNovo({ ...formNovo, imagem_url: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, imagem_url: e.target.value })}
               fullWidth
               placeholder="https://exemplo.com/imagem.jpg"
               sx={{
@@ -982,7 +1053,7 @@ export default function Produtos() {
               control={
                 <Switch
                   checked={formNovo.perecivel}
-                  onChange={(e) => setFormNovo({ ...formNovo, perecivel: e.target.checked })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, perecivel: e.target.checked })}
                   color="warning"
                 />
               }
@@ -998,7 +1069,7 @@ export default function Produtos() {
               control={
                 <Switch
                   checked={formNovo.ativo}
-                  onChange={(e) => setFormNovo({ ...formNovo, ativo: e.target.checked })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormNovo({ ...formNovo, ativo: e.target.checked })}
                   color="primary"
                 />
               }
