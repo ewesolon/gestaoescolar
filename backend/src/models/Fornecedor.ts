@@ -1,4 +1,4 @@
-import { openDb } from "../config/database";
+const db = require("../database");
 
 export interface Fornecedor {
   id: number;
@@ -10,7 +10,7 @@ export interface Fornecedor {
   ativo: boolean;
   sla_entrega_dias?: number;
   taxa_cumprimento?: number;
-  avaliacao_qualidade?: number;
+  // avaliacao_qualidade?: number; - removido com módulo de controle de qualidade
   condicoes_pagamento?: string;
   desconto_volume?: number;
   minimo_compra?: number;
@@ -26,28 +26,27 @@ export interface Fornecedor {
 }
 
 export async function createFornecedorTable() {
-  const db = await openDb();
-  await db.exec(`
+  await db.query(`
     CREATE TABLE IF NOT EXISTS fornecedores (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nome TEXT NOT NULL,
-      cnpj TEXT NOT NULL,
+      id SERIAL PRIMARY KEY,
+      nome VARCHAR(255) NOT NULL,
+      cnpj VARCHAR(18) NOT NULL,
       endereco TEXT,
-      telefone TEXT,
-      email TEXT,
-      ativo BOOLEAN NOT NULL DEFAULT 1,
+      telefone VARCHAR(20),
+      email VARCHAR(255),
+      ativo BOOLEAN NOT NULL DEFAULT true,
       sla_entrega_dias INTEGER DEFAULT 7,
-      taxa_cumprimento REAL DEFAULT 100.00,
-      avaliacao_qualidade REAL DEFAULT 5.00,
+      taxa_cumprimento DECIMAL(5,2) DEFAULT 100.00,
+      -- avaliacao_qualidade DECIMAL(3,2) DEFAULT 5.00, -- removido com módulo de controle de qualidade
       condicoes_pagamento TEXT,
-      desconto_volume REAL,
-      minimo_compra REAL,
+      desconto_volume DECIMAL(5,2),
+      minimo_compra DECIMAL(10,2),
       horario_funcionamento TEXT,
       dias_entrega TEXT,
-      contato_responsavel TEXT,
+      contato_responsavel VARCHAR(255),
       taxa_cumprimento_prazo DECIMAL(5,2) DEFAULT 100.00,
       observacoes TEXT,
-      data_ultima_avaliacao DATETIME,
+      data_ultima_avaliacao TIMESTAMP,
       total_pedidos INTEGER DEFAULT 0,
       total_valor_pedidos DECIMAL(12,2) DEFAULT 0.00,
       media_tempo_entrega DECIMAL(5,2)
@@ -56,66 +55,64 @@ export async function createFornecedorTable() {
 }
 
 export async function insertFornecedor(fornecedor: Omit<Fornecedor, "id">) {
-  const db = await openDb();
-  const result = await db.run(
-    `INSERT INTO fornecedores (nome, cnpj, endereco, telefone, email, ativo, contato_responsavel) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  const result = await db.query(
+    `INSERT INTO fornecedores (nome, cnpj, endereco, telefone, email, ativo, contato_responsavel) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
     [
       fornecedor.nome,
       fornecedor.cnpj,
       fornecedor.endereco || null,
       fornecedor.telefone || null,
       fornecedor.email || null,
-      fornecedor.ativo ? 1 : 0,
+      fornecedor.ativo,
       fornecedor.contato_responsavel || null,
     ]
   );
-  return { ...fornecedor, id: result.lastID };
+  return result.rows[0];
 }
 
 export async function getFornecedores() {
-  const db = await openDb();
-  return await db.all<Fornecedor[]>(`SELECT * FROM fornecedores ORDER BY nome`);
+  const result = await db.query(`SELECT * FROM fornecedores ORDER BY nome`);
+  return result.rows as Fornecedor[];
 }
 
 export async function getFornecedorById(id: number) {
-  const db = await openDb();
-  return await db.get<Fornecedor>(`SELECT * FROM fornecedores WHERE id = ?`, [id]);
+  const result = await db.query(`SELECT * FROM fornecedores WHERE id = $1`, [id]);
+  return result.rows[0] as Fornecedor;
 }
 
 export async function updateFornecedor(id: number, fornecedor: Partial<Fornecedor>) {
-  const db = await openDb();
-  
   // Build dynamic query based on provided fields
   const fields = [];
   const values = [];
+  let paramIndex = 1;
   
   if (fornecedor.nome !== undefined) {
-    fields.push('nome = ?');
+    fields.push(`nome = $${paramIndex++}`);
     values.push(fornecedor.nome);
   }
   if (fornecedor.cnpj !== undefined) {
-    fields.push('cnpj = ?');
+    fields.push(`cnpj = $${paramIndex++}`);
     values.push(fornecedor.cnpj);
   }
   if (fornecedor.contato_responsavel !== undefined) {
-    fields.push('contato_responsavel = ?');
+    fields.push(`contato_responsavel = $${paramIndex++}`);
     values.push(fornecedor.contato_responsavel || null);
   }
   if (fornecedor.email !== undefined) {
-    fields.push('email = ?');
+    fields.push(`email = $${paramIndex++}`);
     values.push(fornecedor.email || null);
   }
   if (fornecedor.telefone !== undefined) {
-    fields.push('telefone = ?');
+    fields.push(`telefone = $${paramIndex++}`);
     values.push(fornecedor.telefone || null);
   }
   if (fornecedor.endereco !== undefined) {
-    fields.push('endereco = ?');
+    fields.push(`endereco = $${paramIndex++}`);
     values.push(fornecedor.endereco || null);
   }
   if (fornecedor.ativo !== undefined) {
-    fields.push('ativo = ?');
-    values.push(fornecedor.ativo ? 1 : 0);
+    fields.push(`ativo = $${paramIndex++}`);
+    values.push(fornecedor.ativo);
   }
   
   if (fields.length === 0) {
@@ -124,13 +121,12 @@ export async function updateFornecedor(id: number, fornecedor: Partial<Fornecedo
   
   values.push(id);
   
-  const query = `UPDATE fornecedores SET ${fields.join(', ')} WHERE id = ?`;
+  const query = `UPDATE fornecedores SET ${fields.join(', ')} WHERE id = $${paramIndex}`;
   console.log('Update query:', query, 'Values:', values);
   
-  await db.run(query, values);
+  await db.query(query, values);
 }
 
 export async function deleteFornecedor(id: number) {
-  const db = await openDb();
-  await db.run(`DELETE FROM fornecedores WHERE id = ?`, [id]);
+  await db.query(`DELETE FROM fornecedores WHERE id = $1`, [id]);
 }

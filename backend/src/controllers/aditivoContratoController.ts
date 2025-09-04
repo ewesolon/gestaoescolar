@@ -492,7 +492,7 @@ export async function obterQuantidadesComAditivos(req: Request, res: Response) {
       SELECT 
         cp.id,
         cp.produto_id,
-        cp.quantidade_contratada as quantidade_original,
+        cp.quantidade as quantidade_original,
         cp.preco_unitario as preco,
         p.nome as produto_nome
       FROM contrato_produtos cp
@@ -525,11 +525,11 @@ export async function obterProdutosContrato(req: Request, res: Response) {
       SELECT 
         cp.id as contrato_produto_id,
         cp.produto_id,
-        cp.quantidade_contratada as quantidade_atual,
+        cp.quantidade as quantidade_atual,
         cp.preco_unitario as preco,
         p.nome as produto_nome,
         p.unidade as produto_unidade,
-        (cp.quantidade_contratada * cp.preco_unitario) as valor_total
+        (cp.quantidade * cp.preco_unitario) as valor_total
       FROM contrato_produtos cp
       LEFT JOIN produtos p ON cp.produto_id = p.id
       WHERE cp.contrato_id = $1

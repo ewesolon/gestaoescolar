@@ -300,7 +300,7 @@ export async function deleteAditivoContrato(id: number) {
       
       // 1. Buscar os itens do aditivo antes de remover para reverter as quantidades
       const itensResult = await db.query(`
-        SELECT aci.*, cp.quantidade_contratada as quantidade_atual
+        SELECT aci.*, cp.quantidade as quantidade_atual
         FROM aditivos_contratos_itens aci
         JOIN contrato_produtos cp ON aci.contrato_produto_id = cp.id
         WHERE aci.aditivo_id = $1
@@ -315,7 +315,7 @@ export async function deleteAditivoContrato(id: number) {
         // Restaurar a quantidade original e reduzir o saldo
         await db.query(`
           UPDATE contrato_produtos 
-          SET quantidade_contratada = $1
+          SET quantidade = $1
           WHERE id = $2
         `, [quantidadeOriginal, item.contrato_produto_id]);
         
@@ -398,7 +398,7 @@ export async function calcularQuantidadesComAditivos(contrato_id: number) {
     SELECT 
       cp.id as contrato_produto_id,
       cp.produto_id,
-      cp.quantidade_contratada as quantidade_original,
+      cp.quantidade as quantidade_original,
       cp.preco_unitario as preco_unitario as preco,
       p.nome as produto_nome,
       p.unidade
@@ -471,10 +471,10 @@ export async function obterQuantidadeOriginalProduto(contrato_produto_id: number
   
   // Se não há aditivos, a quantidade atual é a original
   const produtoResult = await db.query(`
-    SELECT quantidade_contratada FROM contrato_produtos WHERE id = $1
+    SELECT quantidade FROM contrato_produtos WHERE id = $1
   `, [contrato_produto_id]);
   
-  return parseFloat(produtoResult.rows[0].quantidade_contratada);
+  return parseFloat(produtoResult.rows[0].quantidade);
 }
 
 export async function aplicarAditivoQuantidadeGlobal(aditivo_id: number, percentual_acrescimo: number) {
@@ -498,7 +498,7 @@ export async function aplicarAditivoQuantidadeGlobal(aditivo_id: number, percent
       const produtosResult = await db.query(`
         SELECT 
           cp.id as contrato_produto_id,
-          cp.quantidade_contratada as quantidade_atual,
+          cp.quantidade as quantidade_atual,
           cp.preco_unitario as preco_unitario as preco,
           p.nome as produto_nome
         FROM contrato_produtos cp
@@ -556,7 +556,7 @@ export async function aplicarAditivoQuantidadeGlobal(aditivo_id: number, percent
       for (const item of itensAditivo) {
         await db.query(`
           UPDATE contrato_produtos 
-          SET quantidade_contratada = $1
+          SET quantidade = $1
           WHERE id = $2
         `, [item.quantidade_nova, item.contrato_produto_id]);
       }
@@ -605,7 +605,7 @@ export async function aplicarAditivoQuantidadeEspecifica(
         const produtoResult = await db.query(`
           SELECT 
             cp.id as contrato_produto_id,
-            cp.quantidade_contratada as quantidade_atual,
+            cp.quantidade as quantidade_atual,
             cp.preco_unitario as preco,
             p.nome as produto_nome
           FROM contrato_produtos cp
@@ -659,7 +659,7 @@ export async function aplicarAditivoQuantidadeEspecifica(
       for (const item of itensAditivo) {
         await db.query(`
           UPDATE contrato_produtos 
-          SET quantidade_contratada = $1
+          SET quantidade = $1
           WHERE id = $2
         `, [item.quantidade_nova, item.contrato_produto_id]);
       }
@@ -684,7 +684,7 @@ export async function obterProdutosContratoParaAditivo(contrato_id: number) {
     SELECT 
       cp.id as contrato_produto_id,
       cp.produto_id,
-      cp.quantidade_contratada as quantidade_atual,
+      cp.quantidade as quantidade_atual,
       cp.preco_unitario as preco,
       p.nome as produto_nome,
       p.unidade as produto_unidade,
@@ -779,7 +779,7 @@ export async function reaplicarAditivo(aditivo_id: number) {
       for (const item of itensAnteriores.rows) {
         await db.query(`
           UPDATE contrato_produtos 
-          SET quantidade_contratada = quantidade_contratada - $1
+          SET quantidade = quantidade - $1
           WHERE id = $2
         `, [item.quantidade_adicional, item.quantidade_adicional, item.contrato_produto_id]);
       }

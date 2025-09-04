@@ -49,8 +49,8 @@ export async function listarContratos(req: Request, res: Response) {
         c.data_inicio,
         c.data_fim,
         COALESCE(c.valor_total, 0) as valor_total_original,
-        COALESCE(SUM(cp.quantidade_contratada * cp.preco_unitario), c.valor_total, 0) as valor_total,
-        COALESCE(SUM(cp.quantidade_contratada * cp.preco_unitario), c.valor_total, 0) as valor_total_contrato,
+        COALESCE(SUM(cp.quantidade * cp.preco_unitario), c.valor_total, 0) as valor_total,
+        COALESCE(SUM(cp.quantidade * cp.preco_unitario), c.valor_total, 0) as valor_total_contrato,
         c.status,
         c.ativo,
         c.created_at,
@@ -58,7 +58,7 @@ export async function listarContratos(req: Request, res: Response) {
         COUNT(a.id) as total_aditivos,
         COALESCE(SUM(CASE WHEN a.ativo = true THEN 1 ELSE 0 END), 0) as aditivos_ativos,
         -- Valor calculado baseado nos produtos do contrato
-        COALESCE(SUM(cp.quantidade_contratada * cp.preco_unitario), 0) as valor_calculado
+        COALESCE(SUM(cp.quantidade * cp.preco_unitario), 0) as valor_calculado
       FROM contratos c
       LEFT JOIN fornecedores f ON c.fornecedor_id = f.id
       LEFT JOIN contrato_produtos cp ON c.id = cp.contrato_id
@@ -105,7 +105,7 @@ export async function buscarContrato(req: Request, res: Response) {
       SELECT 
         c.*,
         f.nome as fornecedor_nome,
-        COALESCE(SUM(cp.quantidade_contratada * cp.preco_unitario), 0) as valor_calculado
+        COALESCE(SUM(cp.quantidade * cp.preco_unitario), 0) as valor_calculado
       FROM contratos c
       LEFT JOIN fornecedores f ON c.fornecedor_id = f.id
       LEFT JOIN contrato_produtos cp ON c.id = cp.contrato_id
@@ -142,7 +142,7 @@ export async function listarContratosPorFornecedor(req: Request, res: Response) 
       SELECT 
         c.*,
         f.nome as fornecedor_nome,
-        COALESCE(SUM(cp.quantidade_contratada * cp.preco_unitario), 0) as valor_calculado
+        COALESCE(SUM(cp.quantidade * cp.preco_unitario), 0) as valor_calculado
       FROM contratos c
       LEFT JOIN fornecedores f ON c.fornecedor_id = f.id
       LEFT JOIN contrato_produtos cp ON c.id = cp.contrato_id

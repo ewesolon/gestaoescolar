@@ -74,7 +74,7 @@ const SaldoContratos = lazy(() => import("../pages/SaldoContratos"));
 
 
 const DashboardConsistencia = lazy(() => import("../components/DashboardConsistencia"));
-const ExemploTabelaPedido = lazy(() => import("../components/ExemploTabelaPedido"));
+// Componente removido: ExemploTabelaPedido não existe
 
 
 
@@ -292,10 +292,7 @@ export default function AppRouter({ routerConfig }: AppRouterProps) {
               path="/pedidos"
               element={<LazyRoute><PedidosModernos /></LazyRoute>}
             />
-            <Route
-              path="/exemplo-tabela-pedido"
-              element={<LazyRoute><ExemploTabelaPedido /></LazyRoute>}
-            />
+            {/* Rota removida: ExemploTabelaPedido não existe */}
             {/* Sistema clássico removido - agora usando apenas pedidos modernos */}
             {/* 
               MIGRAÇÃO PARA SISTEMA ÚNICO DE RECEBIMENTO

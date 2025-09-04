@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 
 export interface Alerta {
   id?: number;
-  tipo: 'estoque_baixo' | 'produto_vencendo' | 'contrato_vencendo' | 'pedido_atrasado' | 'sistema';
+  tipo: 'estoque_baixo' | 'contrato_vencendo' | 'pedido_atrasado' | 'sistema';
   titulo: string;
   mensagem: string;
   prioridade: 'baixa' | 'media' | 'alta' | 'critica';
@@ -77,43 +77,7 @@ export class AlertaService {
     }
   }
 
-  async verificarProdutosVencendo(): Promise<void> {
-    const query = `
-      SELECT cq.*, p.nome as produto_nome
-      FROM controle_qualidade cq
-      JOIN produtos p ON cq.produto_id = p.id
-      WHERE cq.data_validade <= CURRENT_DATE + INTERVAL '7 days'
-        AND cq.data_validade > CURRENT_DATE
-        AND cq.status IN ('aprovado', 'quarentena')
-        AND NOT EXISTS (
-          SELECT 1 FROM alertas a 
-          WHERE a.tipo = 'produto_vencendo' 
-            AND a.dados_contexto->>'item_controle_id' = cq.id::text
-            AND a.status IN ('pendente', 'lido')
-        )
-    `;
-
-    const result = await this.pool.query(query);
-
-    for (const item of result.rows) {
-      const diasRestantes = Math.ceil((new Date(item.data_validade).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-      
-      await this.criarAlerta({
-        tipo: 'produto_vencendo',
-        titulo: `Produto vencendo: ${item.produto_nome}`,
-        mensagem: `O lote ${item.lote} do produto ${item.produto_nome} vence em ${diasRestantes} dias (${item.data_validade})`,
-        prioridade: diasRestantes <= 3 ? 'critica' : 'alta',
-        status: 'pendente',
-        dados_contexto: {
-          item_controle_id: item.id,
-          produto_id: item.produto_id,
-          lote: item.lote,
-          data_validade: item.data_validade,
-          dias_restantes: diasRestantes
-        }
-      });
-    }
-  }
+  // Função removida: verificarProdutosVencendo - dependia do módulo de controle de qualidade
 
   async verificarContratosVencendo(): Promise<void> {
     const query = `
@@ -195,7 +159,7 @@ export class AlertaService {
   async executarVerificacoes(): Promise<void> {
     try {
       await this.verificarEstoqueBaixo();
-      await this.verificarProdutosVencendo();
+      // Removido: await this.verificarProdutosVencendo(); - dependia do módulo de controle de qualidade
       await this.verificarContratosVencendo();
       await this.verificarPedidosAtrasados();
       
@@ -273,8 +237,7 @@ export class AlertaService {
         COUNT(*) FILTER (WHERE status = 'resolvido') as resolvidos,
         COUNT(*) FILTER (WHERE prioridade = 'critica') as criticos,
         COUNT(*) FILTER (WHERE prioridade = 'alta') as alta_prioridade,
-        COUNT(*) FILTER (WHERE tipo = 'estoque_baixo') as estoque_baixo,
-        COUNT(*) FILTER (WHERE tipo = 'produto_vencendo') as produtos_vencendo
+        COUNT(*) FILTER (WHERE tipo = 'estoque_baixo') as estoque_baixo
       FROM alertas
       WHERE (data_expiracao IS NULL OR data_expiracao > CURRENT_TIMESTAMP)
         AND created_at > CURRENT_DATE - INTERVAL '30 days'

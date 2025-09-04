@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -32,10 +32,20 @@ import {
   Switch,
   Tooltip,
   Menu,
+  Collapse,
+  Divider,
+  Fade,
+  Slide,
+  ListItemIcon,
+  ListItemText,
+  Grid,
+  TablePagination,
+  Checkbox,
+  OutlinedInput,
 } from '@mui/material';
 import {
-  Search,
-  Add,
+  Search as SearchIcon,
+  Add as AddIcon,
   Info,
   School,
   CheckCircle,
@@ -45,6 +55,10 @@ import {
   Download,
   MoreVert,
   Upload,
+  TuneRounded,
+  ExpandMore,
+  ExpandLess,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { listarEscolas, criarEscola, importarEscolasLote } from '../services/escolas';
@@ -97,7 +111,14 @@ const EscolasPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMunicipio, setSelectedMunicipio] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedModalidades, setSelectedModalidades] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('name');
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [hasActiveFilters, setHasActiveFilters] = useState(false);
+
+  // Estados de paginação
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Estados do modal (apenas para criação)
   const [modalOpen, setModalOpen] = useState(false);
@@ -137,8 +158,20 @@ const EscolasPage = () => {
     loadEscolas();
   }, []);
 
+  // Detectar filtros ativos
+  useEffect(() => {
+    const hasFilters = selectedMunicipio || selectedStatus || searchTerm || selectedModalidades.length > 0;
+    setHasActiveFilters(!!hasFilters);
+  }, [selectedMunicipio, selectedStatus, searchTerm, selectedModalidades]);
+
   // Extrair dados únicos para filtros
   const municipios = [...new Set(escolas.map(e => e.municipio).filter(Boolean))];
+  const modalidades = [...new Set(
+    escolas
+      .map(e => e.modalidades)
+      .filter(Boolean)
+      .flatMap(m => m.split(',').map(mod => mod.trim()))
+  )].sort();
 
   // Filtrar e ordenar escolas
   const filteredEscolas = useMemo(() => {
@@ -150,7 +183,11 @@ const EscolasPage = () => {
       const matchesStatus = !selectedStatus ||
         (selectedStatus === 'ativo' && escola.ativo) ||
         (selectedStatus === 'inativo' && !escola.ativo);
-      return matchesSearch && matchesMunicipio && matchesStatus;
+      const matchesModalidades = selectedModalidades.length === 0 || 
+        (escola.modalidades && selectedModalidades.some(modalidade => 
+          escola.modalidades!.split(',').map(m => m.trim()).includes(modalidade)
+        ));
+      return matchesSearch && matchesMunicipio && matchesStatus && matchesModalidades;
     }).sort((a, b) => {
       switch (sortBy) {
         case 'name':
@@ -164,14 +201,272 @@ const EscolasPage = () => {
           return a.nome.localeCompare(b.nome);
       }
     });
-  }, [escolas, searchTerm, selectedMunicipio, selectedStatus, sortBy]);
+  }, [escolas, searchTerm, selectedMunicipio, selectedStatus, selectedModalidades, sortBy]);
 
-  const clearFilters = () => {
+  // Escolas paginadas
+  const paginatedEscolas = useMemo(() => {
+    const startIndex = page * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return filteredEscolas.slice(startIndex, endIndex);
+  }, [filteredEscolas, page, rowsPerPage]);
+
+  // Funções de paginação
+  const handleChangePage = useCallback((event: unknown, newPage: number) => {
+    setPage(newPage);
+  }, []);
+
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
+
+  // Reset da página quando filtros mudam
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm, selectedMunicipio, selectedStatus, selectedModalidades, sortBy]);
+
+  const clearFilters = useCallback(() => {
     setSearchTerm('');
     setSelectedMunicipio('');
     setSelectedStatus('');
+    setSelectedModalidades([]);
     setSortBy('name');
-  };
+    setPage(0);
+  }, []);
+
+  const toggleFilters = useCallback(() => {
+    setFiltersExpanded(!filtersExpanded);
+  }, [filtersExpanded]);
+
+  // Componente de conteúdo dos filtros
+  const FiltersContent = () => (
+    <Box
+      sx={{
+        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+        borderRadius: '16px',
+        p: 3,
+        border: '1px solid rgba(148, 163, 184, 0.1)',
+        backdropFilter: 'blur(10px)',
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '1px',
+          background: 'linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.3), transparent)',
+        },
+      }}
+    >
+      {/* Header dos filtros */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TuneRounded sx={{ color: '#4f46e5', fontSize: 20 }} />
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                color: '#1e293b',
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              }}
+            >
+              Filtros Avançados
+            </Typography>
+          </Box>
+          {hasActiveFilters && (
+            <Chip
+              label="Ativo"
+              size="small"
+              sx={{
+                bgcolor: '#4f46e5',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                height: 24,
+              }}
+            />
+          )}
+        </Box>
+        {hasActiveFilters && (
+          <Button
+            size="small"
+            onClick={clearFilters}
+            sx={{
+              color: '#64748b',
+              textTransform: 'none',
+              fontWeight: 500,
+              '&:hover': { bgcolor: 'rgba(100, 116, 139, 0.1)' },
+            }}
+          >
+            Limpar Tudo
+          </Button>
+        )}
+      </Box>
+
+      <Divider sx={{ mb: 3, borderColor: 'rgba(148, 163, 184, 0.2)' }} />
+
+      {/* Filtros */}
+      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel>Município</InputLabel>
+          <Select
+            value={selectedMunicipio}
+            onChange={(e) => setSelectedMunicipio(e.target.value)}
+            label="Município"
+            sx={{
+              borderRadius: '12px',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(148, 163, 184, 0.3)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#4f46e5',
+              },
+            }}
+          >
+            <MenuItem value="">Todos os municípios</MenuItem>
+            {municipios.map(municipio => (
+              <MenuItem key={municipio} value={municipio}>{municipio}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            label="Status"
+            sx={{
+              borderRadius: '12px',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(148, 163, 184, 0.3)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#4f46e5',
+              },
+            }}
+          >
+            <MenuItem value="">Todos</MenuItem>
+            <MenuItem value="ativo">Ativas</MenuItem>
+            <MenuItem value="inativo">Inativas</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel>Ordenar por</InputLabel>
+          <Select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            label="Ordenar por"
+            sx={{
+              borderRadius: '12px',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(148, 163, 184, 0.3)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#4f46e5',
+              },
+            }}
+          >
+            <MenuItem value="name">Nome</MenuItem>
+            <MenuItem value="municipio">Município</MenuItem>
+            <MenuItem value="status">Status</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel>Modalidades</InputLabel>
+          <Select
+            multiple
+            value={selectedModalidades}
+            onChange={(e) => setSelectedModalidades(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+            input={<OutlinedInput label="Modalidades" />}
+            renderValue={(selected) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.map((value) => (
+                  <Chip key={value} label={value} size="small" />
+                ))}
+              </Box>
+            )}
+            sx={{
+              borderRadius: '12px',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(148, 163, 184, 0.3)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#4f46e5',
+              },
+            }}
+          >
+            {modalidades.map((modalidade) => (
+              <MenuItem key={modalidade} value={modalidade}>
+                <Checkbox checked={selectedModalidades.indexOf(modalidade) > -1} />
+                {modalidade}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* Chips de filtros ativos */}
+      {hasActiveFilters && (
+        <Box sx={{ mt: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {selectedMunicipio && (
+            <Chip
+              label={`Município: ${selectedMunicipio}`}
+              onDelete={() => setSelectedMunicipio('')}
+              size="small"
+              sx={{
+                bgcolor: 'rgba(79, 70, 229, 0.1)',
+                color: '#4f46e5',
+                '& .MuiChip-deleteIcon': { color: '#4f46e5' },
+              }}
+            />
+          )}
+          {selectedStatus && (
+            <Chip
+              label={`Status: ${selectedStatus === 'ativo' ? 'Ativas' : 'Inativas'}`}
+              onDelete={() => setSelectedStatus('')}
+              size="small"
+              sx={{
+                bgcolor: 'rgba(79, 70, 229, 0.1)',
+                color: '#4f46e5',
+                '& .MuiChip-deleteIcon': { color: '#4f46e5' },
+              }}
+            />
+          )}
+          {searchTerm && (
+            <Chip
+              label={`Busca: ${searchTerm}`}
+              onDelete={() => setSearchTerm('')}
+              size="small"
+              sx={{
+                bgcolor: 'rgba(79, 70, 229, 0.1)',
+                color: '#4f46e5',
+                '& .MuiChip-deleteIcon': { color: '#4f46e5' },
+              }}
+            />
+          )}
+          {selectedModalidades.map((modalidade) => (
+            <Chip
+              key={modalidade}
+              label={`Modalidade: ${modalidade}`}
+              onDelete={() => setSelectedModalidades(prev => prev.filter(m => m !== modalidade))}
+              size="small"
+              sx={{
+                bgcolor: 'rgba(79, 70, 229, 0.1)',
+                color: '#4f46e5',
+                '& .MuiChip-deleteIcon': { color: '#4f46e5' },
+              }}
+            />
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
 
   // Funções do modal (apenas para criação)
   const openModal = () => {
@@ -432,33 +727,96 @@ const EscolasPage = () => {
               sx={{
                 flex: 1,
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
+                  borderRadius: '12px',
+                  bgcolor: 'rgba(248, 250, 252, 0.8)',
+                  '& fieldset': {
+                    borderColor: 'rgba(148, 163, 184, 0.3)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#4f46e5',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#4f46e5',
+                    boxShadow: '0 0 0 3px rgba(79, 70, 229, 0.1)',
+                  },
                 },
               }}
               InputProps={{
                 startAdornment: (
-                  <InputAdornment position="start">
-                    <Search sx={{ color: '#9ca3af' }} />
-                  </InputAdornment>
-                ),
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: '#64748b' }} />
+                </InputAdornment>
+              ),
+              endAdornment: searchTerm && (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setSearchTerm('')}
+                    sx={{ color: '#64748b' }}
+                  >
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
               }}
             />
 
             {/* Botões */}
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
-                startIcon={<Add />}
-                onClick={() => openModal()}
+                variant={filtersExpanded || hasActiveFilters ? 'contained' : 'outlined'}
+                startIcon={filtersExpanded ? <ExpandLess /> : <TuneRounded />}
+                onClick={toggleFilters}
                 sx={{
-                  bgcolor: '#059669',
-                  color: 'white',
+                  whiteSpace: 'nowrap',
+                  position: 'relative',
+                  borderRadius: '12px',
                   textTransform: 'none',
-                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                  '&:hover': { bgcolor: '#047857' },
+                  fontWeight: 600,
+                  ...(filtersExpanded || hasActiveFilters ? {
+                    bgcolor: '#4f46e5',
+                    '&:hover': { bgcolor: '#4338ca' },
+                  } : {
+                    borderColor: 'rgba(148, 163, 184, 0.3)',
+                    color: '#64748b',
+                    '&:hover': {
+                      borderColor: '#4f46e5',
+                      bgcolor: 'rgba(79, 70, 229, 0.05)',
+                    },
+                  }),
                 }}
               >
-                Nova Escola
+                Filtros
+                {hasActiveFilters && !filtersExpanded && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: -2,
+                      right: -2,
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      bgcolor: '#ef4444',
+                    }}
+                  />
+                )}
               </Button>
+
+              <Button
+                 startIcon={<AddIcon />}
+                 onClick={() => openModal()}
+                 sx={{
+                   bgcolor: '#059669',
+                   color: 'white',
+                   textTransform: 'none',
+                   borderRadius: '12px',
+                   fontWeight: 600,
+                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                   '&:hover': { bgcolor: '#047857' },
+                 }}
+               >
+                 Nova Escola
+               </Button>
 
               <IconButton
                 onClick={(e) => setActionsMenuAnchor(e.currentTarget)}
@@ -474,82 +832,31 @@ const EscolasPage = () => {
               >
                 <MoreVert />
               </IconButton>
-
-              <Button
-                startIcon={<Clear />}
-                onClick={clearFilters}
-                sx={{
-                  color: '#4f46e5',
-                  textTransform: 'none',
-                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                }}
-              >
-                Limpar Filtros
-              </Button>
             </Box>
           </Box>
 
-          {/* Segunda linha: Filtros e contagem */}
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* Município */}
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Município</InputLabel>
-              <Select
-                value={selectedMunicipio}
-                onChange={(e) => setSelectedMunicipio(e.target.value)}
-                label="Município"
-              >
-                <MenuItem value="">Todos os municípios</MenuItem>
-                {municipios.map(municipio => (
-                  <MenuItem key={municipio} value={municipio}>{municipio}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Status */}
-            <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                label="Status"
-              >
-                <MenuItem value="">Todos</MenuItem>
-                <MenuItem value="ativo">Ativas</MenuItem>
-                <MenuItem value="inativo">Inativas</MenuItem>
-              </Select>
-            </FormControl>
-
-
-
-            {/* Ordenação */}
-            <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Ordenar por</InputLabel>
-              <Select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                label="Ordenar por"
-              >
-                <MenuItem value="name">Nome</MenuItem>
-                <MenuItem value="municipio">Município</MenuItem>
-                <MenuItem value="status">Status</MenuItem>
-
-              </Select>
-            </FormControl>
-
-            {/* Contador e indicador de ordenação */}
-            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
-
-              <Typography
-                sx={{
-                  color: '#6b7280',
-                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                }}
-              >
-                {filteredEscolas.length} de {escolas.length} escolas
-              </Typography>
+          {/* Filtros colapsáveis */}
+          <Collapse in={filtersExpanded} timeout={400}>
+            <Box sx={{ mb: 3 }}>
+              <FiltersContent />
             </Box>
-          </Box>
+          </Collapse>
+
+          {/* Contador de escolas */}
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              mb: 2, 
+              color: '#64748b',
+              fontWeight: 500,
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            }}
+          >
+            {filteredEscolas.length > 0 
+              ? `Mostrando ${Math.min((page * rowsPerPage) + 1, filteredEscolas.length)}-${Math.min((page + 1) * rowsPerPage, filteredEscolas.length)} de ${filteredEscolas.length} escolas${filteredEscolas.length !== escolas.length ? ` (${escolas.length} total)` : ''}`
+              : `0 de ${escolas.length} escolas`
+            }
+          </Typography>
         </Card>
 
         {/* Tabela de Escolas */}
@@ -616,7 +923,7 @@ const EscolasPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredEscolas.map((escola) => (
+                {paginatedEscolas.map((escola) => (
                   <TableRow key={escola.id} hover>
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -671,6 +978,25 @@ const EscolasPage = () => {
                 ))}
               </TableBody>
             </Table>
+            <TablePagination
+              component="div"
+              count={filteredEscolas.length}
+              page={page}
+              onPageChange={handleChangePage}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              labelRowsPerPage="Linhas por página:"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+              sx={{
+                borderTop: '1px solid',
+                borderColor: 'divider',
+                '& .MuiTablePagination-toolbar': {
+                  paddingLeft: 2,
+                  paddingRight: 2,
+                },
+              }}
+            />
           </TableContainer>
         )}
       </Box>

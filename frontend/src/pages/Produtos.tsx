@@ -38,6 +38,10 @@ import {
   Tooltip,
   Paper,
   Menu,
+  TablePagination,
+  Checkbox,
+  OutlinedInput,
+  ListItemText,
 } from "@mui/material";
 import {
   Search,
@@ -52,6 +56,7 @@ import {
   MoreVert,
   Upload,
   Download,
+  FilterList,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
@@ -104,8 +109,16 @@ export default function Produtos() {
   // Estados de filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoria, setSelectedCategoria] = useState('');
+  const [selectedMarcas, setSelectedMarcas] = useState<string[]>([]);
+  const [selectedTipoProcessamento, setSelectedTipoProcessamento] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [sortBy, setSortBy] = useState('name');
+  const [hasActiveFilters, setHasActiveFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Estados de paginação
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
 
 
@@ -143,8 +156,16 @@ export default function Produtos() {
     loadProdutos();
   }, []);
 
+  // Detectar filtros ativos
+  useEffect(() => {
+    const hasFilters = searchTerm || selectedCategoria || selectedMarcas.length > 0 || selectedTipoProcessamento || selectedStatus;
+    setHasActiveFilters(!!hasFilters);
+  }, [searchTerm, selectedCategoria, selectedMarcas, selectedTipoProcessamento, selectedStatus]);
+
   // Extrair dados únicos para filtros
-  const categorias = [...new Set(produtos.map(p => p.categoria).filter(Boolean))];
+  const categorias = [...new Set(produtos.map(p => p.categoria).filter(Boolean))].sort();
+  const marcas = [...new Set(produtos.map(p => p.marca).filter(Boolean))].sort();
+  const tiposProcessamento = [...new Set(produtos.map(p => p.tipo_processamento).filter(Boolean))].sort();
 
   // Filtrar e ordenar produtos
   const filteredProdutos = produtos.filter(produto => {
@@ -153,11 +174,13 @@ export default function Produtos() {
       produto.categoria?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       produto.marca?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategoria = !selectedCategoria || produto.categoria === selectedCategoria;
+    const matchesMarca = selectedMarcas.length === 0 || (produto.marca && selectedMarcas.includes(produto.marca));
+    const matchesTipoProcessamento = !selectedTipoProcessamento || produto.tipo_processamento === selectedTipoProcessamento;
     const matchesStatus = !selectedStatus ||
       (selectedStatus === 'ativo' && produto.ativo) ||
       (selectedStatus === 'inativo' && !produto.ativo);
 
-    return matchesSearch && matchesCategoria && matchesStatus;
+    return matchesSearch && matchesCategoria && matchesMarca && matchesTipoProcessamento && matchesStatus;
   }).sort((a, b) => {
     switch (sortBy) {
       case 'name':
@@ -173,12 +196,41 @@ export default function Produtos() {
     }
   });
 
+  // Produtos paginados
+  const paginatedProdutos = filteredProdutos.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  // Reset da página quando filtros mudam
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm, selectedCategoria, selectedMarcas, selectedTipoProcessamento, selectedStatus]);
+
+  // Funções de paginação
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedCategoria('');
+    setSelectedMarcas([]);
+    setSelectedTipoProcessamento('');
     setSelectedStatus('');
     setSortBy('name');
   };
+
+  // Funções para remover filtros individuais
+  const removeSearchFilter = () => setSearchTerm('');
+  const removeCategoriaFilter = () => setSelectedCategoria('');
+  const removeMarcaFilter = (marca: string) => {
+    setSelectedMarcas(prev => prev.filter(m => m !== marca));
+  };
+  const removeTipoProcessamentoFilter = () => setSelectedTipoProcessamento('');
+  const removeStatusFilter = () => setSelectedStatus('');
 
 
 
@@ -423,74 +475,195 @@ export default function Produtos() {
               </IconButton>
 
               <Button
-                startIcon={<Clear />}
-                onClick={clearFilters}
+                startIcon={<FilterList />}
+                onClick={() => setShowFilters(!showFilters)}
                 sx={{
-                  color: '#4f46e5',
+                  color: hasActiveFilters ? '#059669' : '#6b7280',
+                  bgcolor: hasActiveFilters ? '#f0fdf4' : 'transparent',
+                  border: hasActiveFilters ? '1px solid #059669' : '1px solid #d1d5db',
+                  borderRadius: '8px',
                   textTransform: 'none',
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                  '&:hover': {
+                    bgcolor: hasActiveFilters ? '#dcfce7' : '#f9fafb',
+                  },
                 }}
               >
-                Limpar Filtros
+                Filtros {hasActiveFilters && `(${[searchTerm, selectedCategoria, ...selectedMarcas, selectedTipoProcessamento, selectedStatus].filter(Boolean).length})`}
               </Button>
+
+              {hasActiveFilters && (
+                <Button
+                  startIcon={<Clear />}
+                  onClick={clearFilters}
+                  sx={{
+                    color: '#ef4444',
+                    textTransform: 'none',
+                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                  }}
+                >
+                  Limpar Filtros
+                </Button>
+              )}
             </Box>
           </Box>
 
-          {/* Segunda linha: Filtros e contagem */}
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* Categoria */}
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Categoria</InputLabel>
-              <Select
-                value={selectedCategoria}
-                onChange={(e) => setSelectedCategoria(e.target.value)}
-                label="Categoria"
-              >
-                <MenuItem value="">Todas as categorias</MenuItem>
-                {categorias.map(categoria => (
-                  <MenuItem key={categoria} value={categoria}>{categoria}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          {/* Filtros Avançados */}
+          {showFilters && (
+            <Box sx={{ mb: 3, p: 3, bgcolor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <Typography variant="h6" sx={{ mb: 2, color: '#374151', fontWeight: 600 }}>
+                Filtros Avançados
+              </Typography>
+              
+              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Categoria */}
+                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel>Categoria</InputLabel>
+                  <Select
+                    value={selectedCategoria}
+                    onChange={(e) => setSelectedCategoria(e.target.value)}
+                    label="Categoria"
+                  >
+                    <MenuItem value="">Todas as categorias</MenuItem>
+                    {categorias.map(categoria => (
+                      <MenuItem key={categoria} value={categoria}>{categoria}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-            {/* Status */}
-            <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                label="Status"
-              >
-                <MenuItem value="">Todos</MenuItem>
-                <MenuItem value="ativo">Ativos</MenuItem>
-                <MenuItem value="inativo">Inativos</MenuItem>
-              </Select>
-            </FormControl>
+                {/* Marca (Multi-select) */}
+                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel>Marca</InputLabel>
+                  <Select
+                    multiple
+                    value={selectedMarcas}
+                    onChange={(e) => setSelectedMarcas(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                    input={<OutlinedInput label="Marca" />}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip key={value} label={value} size="small" />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    {marcas.map((marca) => (
+                      <MenuItem key={marca} value={marca}>
+                        <Checkbox checked={selectedMarcas.indexOf(marca) > -1} />
+                        <ListItemText primary={marca} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-            {/* Ordenação */}
-            <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Ordenar por</InputLabel>
-              <Select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                label="Ordenar por"
-              >
-                <MenuItem value="name">Nome</MenuItem>
-                <MenuItem value="categoria">Categoria</MenuItem>
-                <MenuItem value="marca">Marca</MenuItem>
-                <MenuItem value="status">Status</MenuItem>
-              </Select>
-            </FormControl>
+                {/* Tipo de Processamento */}
+                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel>Tipo de Processamento</InputLabel>
+                  <Select
+                    value={selectedTipoProcessamento}
+                    onChange={(e) => setSelectedTipoProcessamento(e.target.value)}
+                    label="Tipo de Processamento"
+                  >
+                    <MenuItem value="">Todos os tipos</MenuItem>
+                    {tiposProcessamento.map(tipo => (
+                      <MenuItem key={tipo} value={tipo}>{tipo}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-            {/* Contador */}
+                {/* Status */}
+                <FormControl sx={{ minWidth: 150 }}>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    label="Status"
+                  >
+                    <MenuItem value="">Todos</MenuItem>
+                    <MenuItem value="ativo">Ativos</MenuItem>
+                    <MenuItem value="inativo">Inativos</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* Ordenação */}
+                <FormControl sx={{ minWidth: 150 }}>
+                  <InputLabel>Ordenar por</InputLabel>
+                  <Select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    label="Ordenar por"
+                  >
+                    <MenuItem value="name">Nome</MenuItem>
+                    <MenuItem value="categoria">Categoria</MenuItem>
+                    <MenuItem value="marca">Marca</MenuItem>
+                    <MenuItem value="status">Status</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
+          )}
+
+          {/* Chips de Filtros Ativos */}
+          {hasActiveFilters && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+              {searchTerm && (
+                <Chip
+                  label={`Busca: "${searchTerm}"`}
+                  onDelete={removeSearchFilter}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+              {selectedCategoria && (
+                <Chip
+                  label={`Categoria: ${selectedCategoria}`}
+                  onDelete={removeCategoriaFilter}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+              {selectedMarcas.map((marca) => (
+                <Chip
+                  key={marca}
+                  label={`Marca: ${marca}`}
+                  onDelete={() => removeMarcaFilter(marca)}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                />
+              ))}
+              {selectedTipoProcessamento && (
+                <Chip
+                  label={`Tipo: ${selectedTipoProcessamento}`}
+                  onDelete={removeTipoProcessamentoFilter}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+              {selectedStatus && (
+                <Chip
+                  label={`Status: ${selectedStatus === 'ativo' ? 'Ativos' : 'Inativos'}`}
+                  onDelete={removeStatusFilter}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                />
+              )}
+            </Box>
+          )}
+
+          {/* Contador de Produtos */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography
               sx={{
                 color: '#6b7280',
                 fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                ml: 'auto',
               }}
             >
-              {filteredProdutos.length} de {produtos.length} produtos
+              Mostrando {paginatedProdutos.length} de {filteredProdutos.length} produtos
               {filteredProdutos.length !== produtos.length && (
                 <Typography
                   component="span"
@@ -501,7 +674,7 @@ export default function Produtos() {
                     fontWeight: 500,
                   }}
                 >
-                  (filtrados)
+                  (filtrados de {produtos.length} total)
                 </Typography>
               )}
             </Typography>
@@ -542,7 +715,7 @@ export default function Produtos() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredProdutos.map((produto) => (
+                  {paginatedProdutos.map((produto) => (
                     <TableRow key={produto.id} hover>
                       <TableCell>
                         <Box>
@@ -603,6 +776,32 @@ export default function Produtos() {
                 </TableBody>
               </Table>
             </TableContainer>
+            
+            {/* Paginação */}
+            {filteredProdutos.length > 0 && (
+              <TablePagination
+                component="div"
+                count={filteredProdutos.length}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                rowsPerPageOptions={[5, 10, 25, 50]}
+                labelRowsPerPage="Produtos por página:"
+                labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+                sx={{
+                  borderTop: '1px solid #e5e7eb',
+                  '& .MuiTablePagination-toolbar': {
+                    paddingLeft: 2,
+                    paddingRight: 2,
+                  },
+                  '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                  },
+                }}
+              />
+            )}
           </Paper>
         )}
       </Box>

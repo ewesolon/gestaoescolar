@@ -10,9 +10,9 @@ export async function listarContratoProdutos(req: Request, res: Response) {
         cp.contrato_id,
         cp.produto_id,
         cp.preco_unitario,
-        cp.quantidade_contratada as limite,
+        cp.quantidade as limite,
         cp.preco_unitario as preco,
-        cp.quantidade_contratada as saldo,
+        cp.quantidade as saldo,
         p.nome as produto_nome,
         p.unidade as unidade_medida,
         c.numero as contrato_numero
@@ -49,9 +49,9 @@ export async function listarProdutosPorContrato(req: Request, res: Response) {
         cp.contrato_id,
         cp.produto_id,
         cp.preco_unitario,
-        cp.quantidade_contratada as limite,
+        cp.quantidade as limite,
         cp.preco_unitario as preco,
-        cp.quantidade_contratada as saldo,
+        cp.quantidade as saldo,
         p.nome as produto_nome,
         p.descricao as produto_descricao,
         p.unidade as unidade_medida,
@@ -127,15 +127,15 @@ export async function criarContratoProduto(req: Request, res: Response) {
     const {
       contrato_id,
       produto_id,
-      quantidade_contratada,
+      quantidade,
       preco_unitario
     } = req.body;
 
     const result = await db.query(`
-      INSERT INTO contrato_produtos (contrato_id, produto_id, preco_unitario, quantidade_contratada)
+      INSERT INTO contrato_produtos (contrato_id, produto_id, preco_unitario, quantidade)
       VALUES ($1, $2, $3, $4)
       RETURNING *
-    `, [contrato_id, produto_id, preco_unitario, quantidade_contratada]);
+    `, [contrato_id, produto_id, preco_unitario, quantidade]);
 
     res.json({
       success: true,
@@ -158,7 +158,7 @@ export async function editarContratoProduto(req: Request, res: Response) {
     const {
       contrato_id,
       produto_id,
-      quantidade_contratada,
+      quantidade,
       preco_unitario
     } = req.body;
 
@@ -167,10 +167,10 @@ export async function editarContratoProduto(req: Request, res: Response) {
         contrato_id = $1,
         produto_id = $2,
         preco_unitario = $3,
-        quantidade_contratada = $4
+        quantidade = $4
       WHERE id = $5
       RETURNING *
-    `, [contrato_id, produto_id, preco_unitario, quantidade_contratada, id]);
+    `, [contrato_id, produto_id, preco_unitario, quantidade, id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({

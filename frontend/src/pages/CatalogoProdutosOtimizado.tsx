@@ -17,6 +17,11 @@ import {
     Drawer,
     CircularProgress,
     Alert,
+    Collapse,
+    Chip,
+    Divider,
+    Fade,
+    Slide,
 } from '@mui/material';
 import {
     Search,
@@ -25,6 +30,9 @@ import {
     ViewList,
     ShoppingCart,
     Clear,
+    ExpandMore,
+    ExpandLess,
+    TuneRounded,
 } from '@mui/icons-material';
 import { carrinhoService } from '../services/carrinho';
 import { ProdutoContrato } from '../types/carrinho';
@@ -41,6 +49,8 @@ const CatalogoProdutosOtimizado = () => {
     const [sortBy, setSortBy] = useState('name');
     const [viewMode, setViewMode] = useState('list');
     const [showFilters, setShowFilters] = useState(false);
+    const [filtersExpanded, setFiltersExpanded] = useState(false);
+    const [hasActiveFilters, setHasActiveFilters] = useState(false);
 
     // Estados para dados
     const [products, setProducts] = useState<ProdutoContrato[]>([]);
@@ -81,6 +91,36 @@ const CatalogoProdutosOtimizado = () => {
     useEffect(() => {
         loadProducts();
     }, []);
+
+    // Detectar filtros ativos
+    useEffect(() => {
+        const hasFilters = selectedSupplier !== '' || searchTerm !== '';
+        setHasActiveFilters(hasFilters);
+        
+        // Auto-expandir filtros se houver filtros ativos
+        if (hasFilters && !filtersExpanded) {
+            setFiltersExpanded(true);
+        }
+    }, [selectedSupplier, searchTerm, filtersExpanded]);
+
+    // Função inteligente para limpar filtros
+    const clearFilters = useCallback(() => {
+        setSelectedSupplier('');
+        setSearchTerm('');
+        setFiltersExpanded(false);
+        loadProducts();
+    }, [loadProducts]);
+
+    // Toggle inteligente dos filtros
+    const toggleFilters = useCallback(() => {
+        if (showFilters && filtersExpanded) {
+            setFiltersExpanded(false);
+            setTimeout(() => setShowFilters(false), 200);
+        } else {
+            setShowFilters(true);
+            setTimeout(() => setFiltersExpanded(true), 100);
+        }
+    }, [showFilters, filtersExpanded]);
 
     // Debounce para busca
     useEffect(() => {
@@ -489,49 +529,160 @@ const CatalogoProdutosOtimizado = () => {
         );
     };
 
-    // Componente para filtros
+    // Componente moderno para filtros
     const FiltersContent = () => (
-        <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Typography
-                    variant="h6"
-                    sx={{
-                        fontWeight: 600,
-                        color: '#1f2937',
-                        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                    }}
-                >
-                    Filtros
-                </Typography>
-                <Button
-                    startIcon={<Clear />}
-                    onClick={clearFilters}
-                    sx={{
-                        color: '#4f46e5',
-                        textTransform: 'none',
-                        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                    }}
-                >
-                    Limpar
-                </Button>
-            </Box>
+        <Fade in={filtersExpanded} timeout={300}>
+            <Box sx={{ 
+                p: { xs: 2, sm: 3 },
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                borderRadius: '16px',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '16px',
+                }
+            }}>
+                <Box sx={{ position: 'relative', zIndex: 1 }}>
+                    {/* Header dos filtros */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TuneRounded sx={{ fontSize: 20 }} />
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    fontWeight: 700,
+                                    fontSize: '1.1rem',
+                                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                }}
+                            >
+                                Filtros Avançados
+                            </Typography>
+                            {hasActiveFilters && (
+                                <Chip 
+                                    size="small" 
+                                    label="Ativo" 
+                                    sx={{ 
+                                        bgcolor: 'rgba(255,255,255,0.2)', 
+                                        color: 'white',
+                                        fontSize: '0.7rem',
+                                        height: 20
+                                    }} 
+                                />
+                            )}
+                        </Box>
+                        
+                        {hasActiveFilters && (
+                            <Button
+                                startIcon={<Clear />}
+                                onClick={clearFilters}
+                                size="small"
+                                sx={{
+                                    color: 'white',
+                                    textTransform: 'none',
+                                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                                    bgcolor: 'rgba(255,255,255,0.1)',
+                                    borderRadius: '8px',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(255,255,255,0.2)',
+                                    }
+                                }}
+                            >
+                                Limpar Tudo
+                            </Button>
+                        )}
+                    </Box>
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <FormControl fullWidth>
-                    <InputLabel>Fornecedor</InputLabel>
-                    <Select
-                        value={selectedSupplier}
-                        onChange={(e) => setSelectedSupplier(e.target.value)}
-                        label="Fornecedor"
-                    >
-                        <MenuItem value="">Todos os fornecedores</MenuItem>
-                        {suppliers.map(supplier => (
-                            <MenuItem key={supplier} value={supplier}>{supplier}</MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+                    <Divider sx={{ bgcolor: 'rgba(255,255,255,0.2)', mb: 3 }} />
+
+                    {/* Filtros */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <Slide in={filtersExpanded} direction="up" timeout={400}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel sx={{ color: 'rgba(255,255,255,0.8)' }}>Fornecedor</InputLabel>
+                                <Select
+                                    value={selectedSupplier}
+                                    onChange={(e) => setSelectedSupplier(e.target.value)}
+                                    label="Fornecedor"
+                                    sx={{
+                                        bgcolor: 'rgba(255,255,255,0.1)',
+                                        borderRadius: '12px',
+                                        color: 'white',
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.3)',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'rgba(255,255,255,0.5)',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: 'white',
+                                        },
+                                        '& .MuiSvgIcon-root': {
+                                            color: 'white',
+                                        }
+                                    }}
+                                >
+                                    <MenuItem value="">Todos os fornecedores</MenuItem>
+                                    {suppliers.map(supplier => (
+                                        <MenuItem key={supplier} value={supplier}>{supplier}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Slide>
+
+                        {/* Chips de filtros ativos */}
+                        {hasActiveFilters && (
+                            <Fade in={hasActiveFilters} timeout={500}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                                    {selectedSupplier && (
+                                        <Chip
+                                            label={`Fornecedor: ${selectedSupplier}`}
+                                            onDelete={() => setSelectedSupplier('')}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: 'rgba(255,255,255,0.2)',
+                                                color: 'white',
+                                                '& .MuiChip-deleteIcon': {
+                                                    color: 'rgba(255,255,255,0.8)',
+                                                    '&:hover': {
+                                                        color: 'white',
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                    {searchTerm && (
+                                        <Chip
+                                            label={`Busca: "${searchTerm}"`}
+                                            onDelete={() => setSearchTerm('')}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: 'rgba(255,255,255,0.2)',
+                                                color: 'white',
+                                                '& .MuiChip-deleteIcon': {
+                                                    color: 'rgba(255,255,255,0.8)',
+                                                    '&:hover': {
+                                                        color: 'white',
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            </Fade>
+                        )}
+                    </Box>
+                </Box>
             </Box>
-        </Box>
+        </Fade>
     );
 
     return (
@@ -573,13 +724,35 @@ const CatalogoProdutosOtimizado = () => {
                                 flex: 1,
                                 maxWidth: 400,
                                 '& .MuiOutlinedInput-root': {
-                                    borderRadius: '8px',
+                                    borderRadius: '12px',
+                                    bgcolor: '#f8fafc',
+                                    border: 'none',
+                                    '& fieldset': { border: 'none' },
+                                    '&:hover': {
+                                        bgcolor: '#f1f5f9',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                    },
+                                    '&.Mui-focused': {
+                                        bgcolor: 'white',
+                                        boxShadow: '0 0 0 3px rgba(79, 70, 229, 0.1), 0 4px 12px rgba(0,0,0,0.15)',
+                                    }
                                 },
                             }}
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
-                                        <Search sx={{ color: '#9ca3af' }} />
+                                        <Search sx={{ color: '#64748b' }} />
+                                    </InputAdornment>
+                                ),
+                                endAdornment: searchTerm && (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => setSearchTerm('')}
+                                            sx={{ color: '#64748b' }}
+                                        >
+                                            <Clear />
+                                        </IconButton>
                                     </InputAdornment>
                                 ),
                             }}
@@ -587,17 +760,41 @@ const CatalogoProdutosOtimizado = () => {
 
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Button
-                                startIcon={<FilterList />}
-                                onClick={() => setShowFilters(!showFilters)}
+                                startIcon={showFilters ? <ExpandLess /> : <TuneRounded />}
+                                onClick={toggleFilters}
+                                variant={hasActiveFilters ? 'contained' : 'outlined'}
                                 sx={{
-                                    bgcolor: '#4f46e5',
-                                    color: 'white',
+                                    bgcolor: hasActiveFilters ? '#4f46e5' : 'transparent',
+                                    color: hasActiveFilters ? 'white' : '#4f46e5',
+                                    borderColor: '#4f46e5',
                                     textTransform: 'none',
                                     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                                    '&:hover': { bgcolor: '#4338ca' },
+                                    borderRadius: '12px',
+                                    minWidth: 'auto',
+                                    px: 2,
+                                    '&:hover': { 
+                                        bgcolor: hasActiveFilters ? '#4338ca' : 'rgba(79, 70, 229, 0.04)',
+                                        borderColor: '#4338ca',
+                                        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.2)',
+                                    },
+                                    position: 'relative',
                                 }}
                             >
-                                Filtros
+                                {isMobile ? '' : (showFilters ? 'Fechar' : 'Filtros')}
+                                {hasActiveFilters && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            top: -4,
+                                            right: -4,
+                                            width: 8,
+                                            height: 8,
+                                            bgcolor: '#ef4444',
+                                            borderRadius: '50%',
+                                            border: '2px solid white',
+                                        }}
+                                    />
+                                )}
                             </Button>
                             <Box sx={{ display: 'flex', bgcolor: '#f3f4f6', borderRadius: '8px' }}>
                                 <IconButton

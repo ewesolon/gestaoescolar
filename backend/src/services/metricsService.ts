@@ -262,9 +262,9 @@ export class MetricsService {
         (SELECT COALESCE(SUM(valor_total), 0) FROM pedidos WHERE status = 'entregue' AND DATE(updated_at) >= CURRENT_DATE - INTERVAL '30 days') as valor_pedidos_mes,
         (SELECT COALESCE(SUM(saldo_disponivel), 0) FROM contratos WHERE status = 'ativo') as saldo_total_contratos,
         
-        -- Indicadores de Qualidade
-        (SELECT COUNT(*) FROM controle_qualidade WHERE status = 'rejeitado' AND DATE(created_at) >= CURRENT_DATE - INTERVAL '30 days') as produtos_rejeitados_mes,
-        (SELECT COUNT(*) FROM controle_qualidade WHERE data_validade <= CURRENT_DATE + INTERVAL '7 days' AND status IN ('aprovado', 'quarentena')) as produtos_vencendo
+        -- Indicadores de Qualidade (removidos - módulo de controle de qualidade desabilitado)
+        0 as produtos_rejeitados_mes,
+        0 as produtos_vencendo
     `;
     
     const result = await this.pool.query(query);

@@ -6,6 +6,7 @@ export interface ContratoProduto {
   produto_id: number;
   preco_unitario: number;
   quantidade_maxima?: number;
+  quantidade?: number;
   ativo: boolean;
   created_at?: Date;
   updated_at?: Date;
@@ -20,8 +21,8 @@ export class ContratoProdutoModel {
 
   async criar(contratoProduto: Omit<ContratoProduto, 'id' | 'created_at' | 'updated_at'>): Promise<ContratoProduto> {
     const query = `
-      INSERT INTO contratos_produtos (contrato_id, produto_id, preco_unitario, quantidade_maxima, ativo)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO contratos_produtos (contrato_id, produto_id, preco_unitario, quantidade_maxima, quantidade, ativo)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `;
     
@@ -30,6 +31,7 @@ export class ContratoProdutoModel {
       contratoProduto.produto_id,
       contratoProduto.preco_unitario,
       contratoProduto.quantidade_maxima,
+      contratoProduto.quantidade,
       contratoProduto.ativo
     ];
 

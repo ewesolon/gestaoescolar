@@ -12,13 +12,10 @@ export interface User {
   updated_at: string;
 }
 
-// Função para criar tabela (compatibilidade)
+// Criar tabela de usuários
 export async function createUserTable(): Promise<void> {
   try {
-    console.log('📋 Verificando tabela usuarios...');
-    
-    // Verificar se tabela existe
-    const existe = await db.query(`
+    const result = await db.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public' 
@@ -26,14 +23,25 @@ export async function createUserTable(): Promise<void> {
       )
     `);
     
-    if (existe.rows[0].exists) {
-      console.log('✅ Tabela usuarios já existe');
-    } else {
-      console.log('⚠️ Tabela usuarios não encontrada no PostgreSQL');
+    if (!result.rows[0].exists) {
+      console.log('🔧 Criando tabela usuarios...');
+      await db.query(`
+        CREATE TABLE usuarios (
+          id SERIAL PRIMARY KEY,
+          nome VARCHAR(255) NOT NULL,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          senha VARCHAR(255) NOT NULL,
+          tipo VARCHAR(50) NOT NULL DEFAULT 'usuario',
+          ativo BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ Tabela usuarios criada com sucesso!');
     }
-    
   } catch (error) {
-    console.error('❌ Erro ao verificar tabela usuarios:', error);
+    console.error('❌ Erro ao criar tabela usuarios:', error);
+    throw error;
   }
 }
 
@@ -138,8 +146,8 @@ export async function emailExists(email: string, excludeId?: number): Promise<bo
       params.push(excludeId);
     }
     
-    const result = await db.get(query, params);
-    return result.count > 0;
+    const result = await db.query(query, params);
+    return result.rows[0].count > 0;
   } catch (error) {
     console.error('❌ Erro ao verificar email:', error);
     throw error;

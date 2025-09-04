@@ -44,7 +44,7 @@ const migrationRoutes = require("./routes/migrationRoutes");
 // Importar rotas preservadas do sistema escolar
 
 
-// Importar configuração PostgreSQL (Supabase)
+// Importar configuração SQLite
 const db = require("./database");
 
 dotenv.config();
@@ -109,11 +109,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Health check endpoint
 app.get("/health", async (req, res) => {
   try {
-    const dbStatus = await db.testConnection();
+    await db.testConnection();
     res.json({
       status: "ok",
       database: "PostgreSQL",
-      dbConnection: dbStatus ? "connected" : "disconnected",
+      dbConnection: "connected",
       timestamp: new Date().toISOString(),
       apiUrl: (config as any).apiUrl || 'http://localhost:3000',
       environment: process.env.NODE_ENV || 'development',

@@ -22,8 +22,6 @@ const ROUTE_MODULE_MAP: { [key: string]: string } = {
 
   '/api/recebimentos': 'DELIVERY',
   '/api/recebimentos-modernos': 'DELIVERY',
-  '/api/controle-qualidade': 'QUALITY',
-
   '/api/movimentacoes-consumo': 'INVENTORY',
   '/api/estoque': 'INVENTORY',
   '/api/alertas': 'REPORTING'
